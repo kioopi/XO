@@ -7,7 +7,8 @@ defmodule Xo.Generators.User do
     seed_generator(
       {User,
        %{
-         email: sequence(:user_email, &"user#{&1}@example.com")
+         email: sequence(:user_email, &"user#{&1}@example.com"),
+         name: sequence(:user_name, &"User #{&1}")
        }},
       overrides: overrides
     )

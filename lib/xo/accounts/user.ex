@@ -104,6 +104,11 @@ defmodule Xo.Accounts.User do
       allow_nil? false
       public? true
     end
+
+    attribute :name, :string do
+      allow_nil? false
+      public? true
+    end
   end
 
   identities do

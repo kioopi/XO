@@ -17,6 +17,18 @@ defmodule Xo.Accounts.UserTest do
 
       assert is_integer(user.id)
     end
+
+    test "name is required" do
+      assert_raise Ash.Error.Unknown, fn ->
+        generate(user(%{name: nil}))
+      end
+    end
+
+    test "name is stored as a string" do
+      user = generate(user(%{name: "Alice"}))
+
+      assert user.name == "Alice"
+    end
   end
 
   describe "identities" do
