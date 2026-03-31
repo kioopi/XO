@@ -14,7 +14,7 @@ defmodule Xo.Games.Game do
 
     transitions do
       transition :join, from: :open, to: :active
-      transition :make_move, from: :active, to: [:won, :draw]
+      transition :make_move, from: :active, to: [:active, :won, :draw]
     end
   end
 
@@ -36,10 +36,12 @@ defmodule Xo.Games.Game do
     end
 
     update :make_move do
-       argument :field, :integer do
-         allow_nil? false
-         constraints min: 0, max: 8
-       end
+      argument :field, :integer do
+        allow_nil? false
+        constraints min: 0, max: 8
+      end
+
+      change transition_state(:active)
     end
   end
 
