@@ -55,7 +55,7 @@ config :spark,
 config :xo,
   ecto_repos: [Xo.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Xo.Accounts],
+  ash_domains: [Xo.Games, Xo.Accounts],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint
