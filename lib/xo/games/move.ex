@@ -8,6 +8,13 @@ defmodule Xo.Games.Move do
 
   actions do
     defaults [:read]
+
+    create :create do
+      accept [:field, :game_id]
+
+      change relate_actor(:player, allow_nil?: false)
+      change Xo.Games.Move.Changes.DeriveFromGame
+    end
   end
 
   attributes do

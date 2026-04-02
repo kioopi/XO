@@ -1,0 +1,40 @@
+defmodule Xo.Games.MoveTest do
+  use Xo.DataCase, async: true
+
+  import Xo.Generators.User, only: [user: 0]
+  import Xo.Generators.Game, only: [game: 0, game: 1]
+  import Ash.Generator, only: [generate: 1]
+
+  alias Xo.Games.Move
+
+  defp active_game do
+    player_o = generate(user())
+    game = generate(game(actor: player_o))
+    player_x = generate(user())
+    active = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+    %{game: active, player_o: player_o, player_x: player_x}
+  end
+
+  describe "create action" do
+    test "creates a move with correct field, move_number, game_id, and player_id" do
+      %{game: game, player_o: player_o} = active_game()
+
+      move =
+        Ash.create!(Move, %{field: 4, game_id: game.id}, action: :create, actor: player_o)
+
+      assert move.field == 4
+      assert move.move_number == 1
+      assert move.game_id == game.id
+      assert move.player_id == player_o.id
+    end
+
+    test "derives move_number from game's move count" do
+      %{game: game, player_o: player_o, player_x: player_x} = active_game()
+
+      Ash.create!(Move, %{field: 0, game_id: game.id}, action: :create, actor: player_o)
+      move2 = Ash.create!(Move, %{field: 1, game_id: game.id}, action: :create, actor: player_x)
+
+      assert move2.move_number == 2
+    end
+  end
+end
