@@ -3,6 +3,7 @@ defmodule Xo.Games.MoveTest do
 
   import Xo.Generators.User, only: [user: 0]
   import Xo.Generators.Game, only: [game: 0, game: 1]
+  import Xo.Generators.Move, only: [move: 0, move: 1]
   import Ash.Generator, only: [generate: 1]
 
   alias Xo.Games.Move
@@ -90,6 +91,27 @@ defmodule Xo.Games.MoveTest do
       move2 = Ash.create!(Move, %{field: 4, game_id: game2.id}, action: :create, actor: player_o2)
 
       assert move2.field == 4
+    end
+  end
+
+  describe "generator" do
+    test "generates a valid move with defaults" do
+      move = generate(move())
+
+      assert move.id
+      assert move.field
+      assert move.move_number == 1
+      assert move.game_id
+      assert move.player_id
+    end
+
+    test "generates a move for a provided game" do
+      %{game: game, player_o: player_o} = active_game()
+
+      move = generate(move(game: game, actor: player_o))
+
+      assert move.game_id == game.id
+      assert move.player_id == player_o.id
     end
   end
 end
