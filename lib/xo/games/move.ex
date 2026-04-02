@@ -1,6 +1,9 @@
 defmodule Xo.Games.Move do
   use Ash.Resource, otp_app: :xo, domain: Xo.Games, data_layer: AshPostgres.DataLayer
 
+  alias Xo.Games.Move.Changes
+  alias Xo.Games.Move.Validations
+
   postgres do
     table "moves"
     repo Xo.Repo
@@ -14,9 +17,9 @@ defmodule Xo.Games.Move do
       accept [:field, :game_id]
 
       change relate_actor(:player, allow_nil?: false)
-      change Xo.Games.Move.Changes.LoadGame
-      change Xo.Games.Move.Changes.SetMoveNumber
-      validate Xo.Games.Move.Validations.ValidatePlayerTurn
+      change Changes.LoadGame
+      change Changes.SetMoveNumber
+      validate Validations.ValidatePlayerTurn
     end
   end
 

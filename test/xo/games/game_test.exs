@@ -16,7 +16,7 @@ defmodule Xo.Games.GameTest do
     end
 
     test "game starts in open state" do
-      game = generate(game())
+      game = generate(game()) |> Ash.load!(:state)
 
       assert game.state == :open
     end
@@ -79,7 +79,9 @@ defmodule Xo.Games.GameTest do
       game = generate(game())
       joiner = generate(user())
 
-      updated = Ash.update!(game, %{}, action: :join, actor: joiner, authorize?: true)
+      updated =
+        Ash.update!(game, %{}, action: :join, actor: joiner, authorize?: true)
+        |> Ash.load!(:state)
 
       assert updated.state == :active
     end
@@ -108,7 +110,7 @@ defmodule Xo.Games.GameTest do
 
       Ash.update!(game, %{}, action: :join, actor: joiner1, authorize?: true)
 
-      assert_raise Ash.Error.Forbidden, fn ->
+      assert_raise Ash.Error.Invalid, fn ->
         Ash.update!(game, %{}, action: :join, actor: joiner2, authorize?: true)
       end
     end
@@ -236,7 +238,9 @@ defmodule Xo.Games.GameTest do
       player_x: player_x
     } do
       # O takes 0, X takes 3
-      game = play_moves(game, [0, 3], player_o, player_x)
+      game =
+        play_moves(game, [0, 3], player_o, player_x)
+        |> Ash.load!([:state, :winner_id])
 
       assert game.state == :active
       assert game.winner_id == nil
@@ -249,7 +253,9 @@ defmodule Xo.Games.GameTest do
     } do
       # O: 0, 1, 2 (top row)
       # X: 3, 4
-      game = play_moves(game, [0, 3, 1, 4, 2], player_o, player_x)
+      game =
+        play_moves(game, [0, 3, 1, 4, 2], player_o, player_x)
+        |> Ash.load!([:state, :winner_id])
 
       assert game.state == :won
       assert game.winner_id == player_o.id
@@ -262,7 +268,9 @@ defmodule Xo.Games.GameTest do
     } do
       # O: 1, 4, 8
       # X: 0, 3, 6 (left column)
-      game = play_moves(game, [1, 0, 4, 3, 8, 6], player_o, player_x)
+      game =
+        play_moves(game, [1, 0, 4, 3, 8, 6], player_o, player_x)
+        |> Ash.load!([:state, :winner_id])
 
       assert game.state == :won
       assert game.winner_id == player_x.id
@@ -275,7 +283,9 @@ defmodule Xo.Games.GameTest do
     } do
       # O: 0, 4, 8 (diagonal)
       # X: 1, 2
-      game = play_moves(game, [0, 1, 4, 2, 8], player_o, player_x)
+      game =
+        play_moves(game, [0, 1, 4, 2, 8], player_o, player_x)
+        |> Ash.load!([:state, :winner_id])
 
       assert game.state == :won
       assert game.winner_id == player_o.id
@@ -292,7 +302,9 @@ defmodule Xo.Games.GameTest do
       # O | X | O
       # O | X | X
       # X | O | O
-      game = play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
+      game =
+        play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
+        |> Ash.load!([:state, :winner_id])
 
       assert game.state == :draw
       assert game.winner_id == nil
@@ -305,7 +317,7 @@ defmodule Xo.Games.GameTest do
     } do
       # O wins with top row
       game = play_moves(game, [0, 3, 1, 4, 2], player_o, player_x)
-      assert game.state == :won
+      assert Ash.load!(game, :state).state == :won
 
       assert_raise Ash.Error.Invalid, fn ->
         Ash.update!(game, %{field: 5}, action: :make_move, actor: player_x, authorize?: true)
@@ -318,7 +330,7 @@ defmodule Xo.Games.GameTest do
       player_x: player_x
     } do
       game = play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
-      assert game.state == :draw
+      assert Ash.load!(game, :state).state == :draw
 
       assert_raise Ash.Error.Invalid, fn ->
         Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)

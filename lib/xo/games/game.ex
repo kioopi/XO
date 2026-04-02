@@ -2,21 +2,10 @@ defmodule Xo.Games.Game do
   use Ash.Resource,
     otp_app: :xo,
     domain: Xo.Games,
-    extensions: [AshStateMachine],
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer]
 
   alias Xo.Accounts.User
-
-  state_machine do
-    initial_states [:open]
-    default_initial_state :open
-
-    transitions do
-      transition :join, from: :open, to: :active
-      transition :make_move, from: :active, to: [:active, :won, :draw]
-    end
-  end
 
   postgres do
     table "games"
@@ -31,8 +20,10 @@ defmodule Xo.Games.Game do
     end
 
     update :join do
+      require_atomic? false
+
+      validate {Xo.Games.Validations.ValidateGameState, states: [:open]}
       change relate_actor(:player_x, allow_nil?: false)
-      change transition_state(:active)
     end
 
     update :make_move do
@@ -43,7 +34,7 @@ defmodule Xo.Games.Game do
         constraints min: 0, max: 8
       end
 
-      change Xo.Games.Changes.DetermineGameState
+      validate {Xo.Games.Validations.ValidateGameState, states: :active}
       change Xo.Games.Changes.CreateMove
     end
   end
@@ -107,14 +98,12 @@ defmodule Xo.Games.Game do
       attribute_type :integer
     end
 
-    belongs_to :winner, User do
-      public? true
-    end
-
     has_many :moves, Xo.Games.Move
   end
 
   calculations do
+    calculate :winner_id, :integer, Xo.Games.Calculations.WinnerId
+    calculate :state, :atom, Xo.Games.Calculations.GameState
     calculate :next_move_number, :integer, expr(move_count + 1)
 
     calculate :next_player_id,
