@@ -2,7 +2,7 @@ defmodule Xo.Games.MoveTest do
   use Xo.DataCase, async: true
 
   import Xo.Generators.User, only: [user: 0]
-  import Xo.Generators.Game, only: [game: 0, game: 1]
+  import Xo.Generators.Game, only: [game: 1]
   import Xo.Generators.Move, only: [move: 0, move: 1]
   import Ash.Generator, only: [generate: 1]
 
