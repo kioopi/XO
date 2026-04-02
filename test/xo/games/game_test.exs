@@ -207,4 +207,57 @@ defmodule Xo.Games.GameTest do
       assert game.next_player_id == player_o.id
     end
   end
+
+  describe "calculations after moves" do
+    setup do
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+      player_x = generate(user())
+      active_game = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      %{game: active_game, player_o: player_o, player_x: player_x}
+    end
+
+    test "next_move_number increments after each move", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game = Ash.load!(game, [:next_move_number])
+      assert game.next_move_number == 1
+
+      game =
+        Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)
+
+      game = Ash.load!(game, [:next_move_number])
+      assert game.next_move_number == 2
+
+      game =
+        Ash.update!(game, %{field: 1}, action: :make_move, actor: player_x, authorize?: true)
+
+      game = Ash.load!(game, [:next_move_number])
+      assert game.next_move_number == 3
+    end
+
+    test "next_player_id alternates between players", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game = Ash.load!(game, [:next_player_id])
+      assert game.next_player_id == player_o.id
+
+      game =
+        Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)
+
+      game = Ash.load!(game, [:next_player_id])
+      assert game.next_player_id == player_x.id
+
+      game =
+        Ash.update!(game, %{field: 1}, action: :make_move, actor: player_x, authorize?: true)
+
+      game = Ash.load!(game, [:next_player_id])
+      assert game.next_player_id == player_o.id
+    end
+  end
 end
