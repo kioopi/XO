@@ -4,5 +4,6 @@ defmodule Xo.Games do
 
   resources do
     resource Xo.Games.Game
+    resource Xo.Games.Move
   end
 end

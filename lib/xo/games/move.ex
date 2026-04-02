@@ -1,0 +1,41 @@
+defmodule Xo.Games.Move do
+  use Ash.Resource, otp_app: :xo, domain: Xo.Games, data_layer: AshPostgres.DataLayer
+
+  postgres do
+    table "moves"
+    repo Xo.Repo
+  end
+
+  actions do
+    defaults [:read]
+  end
+
+  attributes do
+    integer_primary_key :id
+
+    attribute :field, :integer do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :move_number, :integer do
+      allow_nil? false
+      public? true
+    end
+
+    timestamps()
+  end
+
+  relationships do
+    belongs_to :player, Xo.Accounts.User do
+      public? true
+      allow_nil? false
+      attribute_type :integer
+    end
+
+    belongs_to :game, Xo.Games.Game do
+      public? true
+      allow_nil? false
+    end
+  end
+end
