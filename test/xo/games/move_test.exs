@@ -99,7 +99,7 @@ defmodule Xo.Games.MoveTest do
       move = generate(move())
 
       assert move.id
-      assert move.field
+      assert is_integer(move.field)
       assert move.move_number == 1
       assert move.game_id
       assert move.player_id
