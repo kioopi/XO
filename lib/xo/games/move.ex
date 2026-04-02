@@ -14,6 +14,7 @@ defmodule Xo.Games.Move do
 
       change relate_actor(:player, allow_nil?: false)
       change Xo.Games.Move.Changes.DeriveFromGame
+      validate Xo.Games.Move.Validations.ValidatePlayerTurn
     end
   end
 

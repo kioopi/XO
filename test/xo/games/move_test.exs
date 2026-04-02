@@ -36,5 +36,25 @@ defmodule Xo.Games.MoveTest do
 
       assert move2.move_number == 2
     end
+
+    test "rejects move when it is not the actor's turn" do
+      %{game: game, player_x: player_x} = active_game()
+
+      assert_raise Ash.Error.Invalid, ~r/not this player's turn/, fn ->
+        Ash.create!(Move, %{field: 0, game_id: game.id}, action: :create, actor: player_x)
+      end
+    end
+
+    test "allows player_x to move on the second turn" do
+      %{game: game, player_o: player_o, player_x: player_x} = active_game()
+
+      Ash.create!(Move, %{field: 0, game_id: game.id}, action: :create, actor: player_o)
+
+      move =
+        Ash.create!(Move, %{field: 1, game_id: game.id}, action: :create, actor: player_x)
+
+      assert move.player_id == player_x.id
+      assert move.move_number == 2
+    end
   end
 end
