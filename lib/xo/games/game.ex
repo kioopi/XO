@@ -110,4 +110,16 @@ defmodule Xo.Games.Game do
 
     has_many :moves, Xo.Games.Move
   end
+
+  aggregates do
+    count :move_count, :moves
+  end
+
+  calculations do
+    calculate :next_move_number, :integer, expr(move_count + 1)
+
+    calculate :next_player_id, :uuid, expr(
+      if(rem(move_count, 2) == 0, player_o_id, player_x_id)
+    )
+  end
 end

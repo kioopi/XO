@@ -146,4 +146,36 @@ defmodule Xo.Games.GameTest do
       end
     end
   end
+
+  describe "next_move_number calculation" do
+    setup do
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+      player_x = generate(user())
+      active_game = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      %{game: active_game, player_o: player_o, player_x: player_x}
+    end
+
+    test "returns 1 for a game with no moves", %{game: game} do
+      game = Ash.load!(game, :next_move_number)
+      assert game.next_move_number == 1
+    end
+  end
+
+  describe "next_player_id calculation" do
+    setup do
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+      player_x = generate(user())
+      active_game = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      %{game: active_game, player_o: player_o, player_x: player_x}
+    end
+
+    test "returns player_o_id for a game with no moves", %{game: game, player_o: player_o} do
+      game = Ash.load!(game, :next_player_id)
+      assert game.next_player_id == player_o.id
+    end
+  end
 end
