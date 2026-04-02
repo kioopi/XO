@@ -128,8 +128,9 @@ defmodule Xo.Games.GameTest do
       assert Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)
     end
 
-    test "succeeds when actor is player_x", %{game: game, player_x: player_x} do
-      assert Ash.update!(game, %{field: 0}, action: :make_move, actor: player_x, authorize?: true)
+    test "succeeds when actor is player_x", %{game: game, player_o: player_o, player_x: player_x} do
+      game = Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)
+      assert Ash.update!(game, %{field: 1}, action: :make_move, actor: player_x, authorize?: true)
     end
 
     test "fails without an actor", %{game: game} do
@@ -144,6 +145,34 @@ defmodule Xo.Games.GameTest do
       assert_raise Ash.Error.Forbidden, fn ->
         Ash.update!(game, %{field: 0}, action: :make_move, actor: stranger, authorize?: true)
       end
+    end
+
+    test "creates a Move record", %{game: game, player_o: player_o} do
+      Ash.update!(game, %{field: 4}, action: :make_move, actor: player_o, authorize?: true)
+
+      [move] = Ash.read!(Xo.Games.Move)
+      assert move.field == 4
+      assert move.move_number == 1
+      assert move.game_id == game.id
+      assert move.player_id == player_o.id
+    end
+
+    test "creates moves with alternating players", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game =
+        Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)
+
+      Ash.update!(game, %{field: 1}, action: :make_move, actor: player_x, authorize?: true)
+
+      moves = Ash.read!(Xo.Games.Move) |> Enum.sort_by(& &1.move_number)
+      assert length(moves) == 2
+      assert Enum.at(moves, 0).player_id == player_o.id
+      assert Enum.at(moves, 0).move_number == 1
+      assert Enum.at(moves, 1).player_id == player_x.id
+      assert Enum.at(moves, 1).move_number == 2
     end
   end
 

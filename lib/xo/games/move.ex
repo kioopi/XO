@@ -10,6 +10,7 @@ defmodule Xo.Games.Move do
     defaults [:read]
 
     create :create do
+      primary? true
       accept [:field, :game_id]
 
       change relate_actor(:player, allow_nil?: false)

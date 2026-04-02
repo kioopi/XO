@@ -36,12 +36,15 @@ defmodule Xo.Games.Game do
     end
 
     update :make_move do
+      require_atomic? false
+
       argument :field, :integer do
         allow_nil? false
         constraints min: 0, max: 8
       end
 
       change transition_state(:active)
+      change Xo.Games.Changes.CreateMove
     end
   end
 
