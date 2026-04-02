@@ -107,5 +107,7 @@ defmodule Xo.Games.Game do
     belongs_to :winner, User do
       public? true
     end
+
+    has_many :moves, Xo.Games.Move
   end
 end

@@ -36,6 +36,12 @@ defmodule Xo.Games.Move do
     belongs_to :game, Xo.Games.Game do
       public? true
       allow_nil? false
+      attribute_type :integer
     end
+  end
+
+  identities do
+    identity :unique_field_per_game, [:game_id, :field]
+    identity :unique_move_number_per_game, [:game_id, :move_number]
   end
 end
