@@ -208,6 +208,124 @@ defmodule Xo.Games.GameTest do
     end
   end
 
+  describe "game state after moves" do
+    setup do
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+      player_x = generate(user())
+      active_game = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      %{game: active_game, player_o: player_o, player_x: player_x}
+    end
+
+    defp play_moves(game, fields, player_o, player_x) do
+      Enum.reduce(fields, {game, 0}, fn field, {game, index} ->
+        actor = if rem(index, 2) == 0, do: player_o, else: player_x
+
+        game =
+          Ash.update!(game, %{field: field}, action: :make_move, actor: actor, authorize?: true)
+
+        {game, index + 1}
+      end)
+      |> elem(0)
+    end
+
+    test "game stays active after non-winning moves", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      # O takes 0, X takes 3
+      game = play_moves(game, [0, 3], player_o, player_x)
+
+      assert game.state == :active
+      assert game.winner_id == nil
+    end
+
+    test "player_o wins with top row", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      # O: 0, 1, 2 (top row)
+      # X: 3, 4
+      game = play_moves(game, [0, 3, 1, 4, 2], player_o, player_x)
+
+      assert game.state == :won
+      assert game.winner_id == player_o.id
+    end
+
+    test "player_x wins with left column", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      # O: 1, 4, 8
+      # X: 0, 3, 6 (left column)
+      game = play_moves(game, [1, 0, 4, 3, 8, 6], player_o, player_x)
+
+      assert game.state == :won
+      assert game.winner_id == player_x.id
+    end
+
+    test "player_o wins with diagonal", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      # O: 0, 4, 8 (diagonal)
+      # X: 1, 2
+      game = play_moves(game, [0, 1, 4, 2, 8], player_o, player_x)
+
+      assert game.state == :won
+      assert game.winner_id == player_o.id
+    end
+
+    test "game ends in a draw when board is full with no winner", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      # O: 0, 2, 3, 7, 8
+      # X: 1, 4, 5, 6
+      # Board:
+      # O | X | O
+      # O | X | X
+      # X | O | O
+      game = play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
+
+      assert game.state == :draw
+      assert game.winner_id == nil
+    end
+
+    test "cannot make move after game is won", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      # O wins with top row
+      game = play_moves(game, [0, 3, 1, 4, 2], player_o, player_x)
+      assert game.state == :won
+
+      assert_raise Ash.Error.Invalid, fn ->
+        Ash.update!(game, %{field: 5}, action: :make_move, actor: player_x, authorize?: true)
+      end
+    end
+
+    test "cannot make move after draw", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game = play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
+      assert game.state == :draw
+
+      assert_raise Ash.Error.Invalid, fn ->
+        Ash.update!(game, %{field: 0}, action: :make_move, actor: player_o, authorize?: true)
+      end
+    end
+  end
+
   describe "calculations after moves" do
     setup do
       player_o = generate(user())

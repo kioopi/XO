@@ -43,7 +43,7 @@ defmodule Xo.Games.Game do
         constraints min: 0, max: 8
       end
 
-      change transition_state(:active)
+      change Xo.Games.Changes.DetermineGameState
       change Xo.Games.Changes.CreateMove
     end
   end
@@ -66,7 +66,7 @@ defmodule Xo.Games.Game do
 
     policy action(:make_move) do
       forbid_unless actor_present()
-      authorize_if expr(player_o_id == ^actor(:id) or player_x_id == ^actor(:id))
+      authorize_if expr(next_player_id == ^actor(:id))
     end
   end
 
@@ -124,5 +124,13 @@ defmodule Xo.Games.Game do
 
   aggregates do
     count :move_count, :moves
+
+    list :player_o_fields, :moves, :field do
+      filter expr(player_id == parent(player_o_id))
+    end
+
+    list :player_x_fields, :moves, :field do
+      filter expr(player_id == parent(player_x_id))
+    end
   end
 end
