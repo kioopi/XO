@@ -3,7 +3,14 @@ defmodule Xo.Games do
     otp_app: :xo
 
   resources do
-    resource Xo.Games.Game
+    resource Xo.Games.Game do
+      define :create_game, action: :create
+      define :list_open_games, action: :open
+      define :join, action: :join
+      define :make_move, action: :make_move, args: [:field]
+      define :get_by_id, action: :read, get_by: [:id]
+    end
+
     resource Xo.Games.Move
   end
 end
