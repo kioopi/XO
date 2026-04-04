@@ -3,7 +3,8 @@ defmodule Xo.Games.Game do
     otp_app: :xo,
     domain: Xo.Games,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub]
 
   alias Xo.Accounts.User
 

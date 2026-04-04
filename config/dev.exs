@@ -1,5 +1,5 @@
 import Config
-config :ash, policies: [show_policy_breakdowns?: true]
+config :ash, policies: [show_policy_breakdowns?: true], pub_sub: [debug?: true]
 
 # Configure your database
 config :xo, Xo.Repo,
