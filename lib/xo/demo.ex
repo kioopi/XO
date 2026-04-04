@@ -97,6 +97,57 @@ defmodule Xo.Demo do
   end
 
   @doc """
+  Load and display all important game information: state, players, board, and available moves.
+  """
+  def show(game) do
+    game =
+      Ash.load!(
+        game,
+        [
+          :state,
+          :board,
+          :available_fields,
+          :move_count,
+          :winner_id,
+          :player_o,
+          :player_x
+        ],
+        authorize?: false
+      )
+
+    IO.puts("")
+    IO.puts("  #{@bright}#{@cyan}Game ##{game.id}#{@reset}")
+    IO.puts("")
+
+    state_color = if game.state == :won, do: @green, else: @white
+    IO.puts("  #{@dim}State:#{@reset}    #{state_color}#{game.state}#{@reset}")
+    IO.puts("  #{@dim}Moves:#{@reset}    #{@white}#{game.move_count}#{@reset}")
+
+    IO.puts("  #{@dim}Player O:#{@reset} #{@yellow}#{game.player_o.name}#{@reset}")
+
+    if game.player_x do
+      IO.puts("  #{@dim}Player X:#{@reset} #{@green}#{game.player_x.name}#{@reset}")
+    end
+
+    if game.state == :won do
+      winner = if game.winner_id == game.player_o.id, do: game.player_o, else: game.player_x
+      IO.puts("  #{@dim}Winner:#{@reset}   #{@bright}#{@green}#{winner.name}#{@reset}")
+    end
+
+    IO.puts("")
+    IO.puts("  #{@bright}Board#{@reset}")
+    board(game)
+
+    if game.state == :active do
+      fields = game.available_fields |> Enum.sort() |> Enum.join(", ")
+      IO.puts("  #{@dim}Available:#{@reset} #{@white}#{fields}#{@reset}")
+      IO.puts("")
+    end
+
+    :ok
+  end
+
+  @doc """
   Print an ASCII representation of the current board.
 
   Played fields show `X` or `O`, empty fields show their number (0-8).
