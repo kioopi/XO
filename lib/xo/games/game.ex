@@ -111,6 +111,9 @@ defmodule Xo.Games.Game do
     calculate :next_player_id,
               :integer,
               expr(if(rem(move_count, 2) == 0, player_o_id, player_x_id))
+
+    calculate :board, {:array, :atom}, Xo.Games.Calculations.Board
+    calculate :available_fields, {:array, :integer}, Xo.Games.Calculations.AvailableFields
   end
 
   aggregates do

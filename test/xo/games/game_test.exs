@@ -390,4 +390,96 @@ defmodule Xo.Games.GameTest do
       assert game.next_player_id == player_o.id
     end
   end
+
+  describe "board calculation" do
+    setup do
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+      player_x = generate(user())
+      active_game = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      %{game: active_game, player_o: player_o, player_x: player_x}
+    end
+
+    test "empty board is all nils", %{game: game} do
+      game = Ash.load!(game, :board)
+
+      assert game.board == [nil, nil, nil, nil, nil, nil, nil, nil, nil]
+    end
+
+    test "shows :o for player_o move", %{game: game, player_o: player_o} do
+      game =
+        Ash.update!(game, %{field: 4}, action: :make_move, actor: player_o, authorize?: true)
+
+      game = Ash.load!(game, :board)
+
+      assert game.board == [nil, nil, nil, nil, :o, nil, nil, nil, nil]
+    end
+
+    test "shows :o and :x for both players' moves", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game = play_moves(game, [0, 4], player_o, player_x)
+      game = Ash.load!(game, :board)
+
+      assert game.board == [:o, nil, nil, nil, :x, nil, nil, nil, nil]
+    end
+
+    test "full board has no nils", %{game: game, player_o: player_o, player_x: player_x} do
+      game = play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
+      game = Ash.load!(game, :board)
+
+      assert game.board == [:o, :x, :o, :o, :x, :x, :x, :o, :o]
+    end
+  end
+
+  describe "available_fields calculation" do
+    setup do
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+      player_x = generate(user())
+      active_game = Ash.update!(game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      %{game: active_game, player_o: player_o, player_x: player_x}
+    end
+
+    test "all fields available on empty board", %{game: game} do
+      game = Ash.load!(game, :available_fields)
+
+      assert Enum.sort(game.available_fields) == [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    end
+
+    test "played field is no longer available", %{game: game, player_o: player_o} do
+      game =
+        Ash.update!(game, %{field: 4}, action: :make_move, actor: player_o, authorize?: true)
+
+      game = Ash.load!(game, :available_fields)
+
+      assert Enum.sort(game.available_fields) == [0, 1, 2, 3, 5, 6, 7, 8]
+    end
+
+    test "multiple played fields are excluded", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game = play_moves(game, [0, 4], player_o, player_x)
+      game = Ash.load!(game, :available_fields)
+
+      assert Enum.sort(game.available_fields) == [1, 2, 3, 5, 6, 7, 8]
+    end
+
+    test "no fields available on full board", %{
+      game: game,
+      player_o: player_o,
+      player_x: player_x
+    } do
+      game = play_moves(game, [0, 1, 2, 4, 3, 5, 7, 6, 8], player_o, player_x)
+      game = Ash.load!(game, :available_fields)
+
+      assert game.available_fields == []
+    end
+  end
 end
