@@ -89,10 +89,57 @@ defmodule Xo.Accounts.User do
 
       run AshAuthentication.Strategy.MagicLink.Request
     end
+
+    create :demo_create do
+      description "Create a user for demo purposes. No authentication required."
+      accept [:name]
+
+      argument :email, :ci_string
+
+      change fn changeset, _context ->
+        if Ash.Changeset.get_argument(changeset, :email) do
+          Ash.Changeset.force_change_attribute(
+            changeset,
+            :email,
+            Ash.Changeset.get_argument(changeset, :email)
+          )
+        else
+          name = Ash.Changeset.get_attribute(changeset, :name)
+          default_email = "#{String.downcase(String.replace(name, " ", "."))}@example.com"
+          Ash.Changeset.force_change_attribute(changeset, :email, default_email)
+        end
+      end
+    end
+
+    action :demo_sign_in, :struct do
+      constraints instance_of: Xo.Accounts.User
+
+      argument :name, :string, allow_nil?: false
+      argument :email, :ci_string
+
+      run fn input, _context ->
+        email =
+          input.arguments[:email] ||
+            "#{String.downcase(String.replace(input.arguments.name, " ", "."))}@example.com"
+
+        with {:ok, user} <- Ash.get(Xo.Accounts.User, %{email: email}, authorize?: false),
+             {:ok, token, _claims} <- AshAuthentication.Jwt.token_for_user(user) do
+          {:ok, Ash.Resource.put_metadata(user, :token, token)}
+        end
+      end
+    end
   end
 
   policies do
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+      authorize_if always()
+    end
+
+    policy action(:demo_create) do
+      authorize_if always()
+    end
+
+    policy action(:demo_sign_in) do
       authorize_if always()
     end
   end

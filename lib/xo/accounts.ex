@@ -7,6 +7,9 @@ defmodule Xo.Accounts do
 
   resources do
     resource Xo.Accounts.Token
-    resource Xo.Accounts.User
+    resource Xo.Accounts.User do
+      define :demo_create_user, action: :demo_create, args: [:name, {:optional, :email}]
+      define :demo_sign_in, action: :demo_sign_in, args: [:name, {:optional, :email}]
+    end
   end
 end
