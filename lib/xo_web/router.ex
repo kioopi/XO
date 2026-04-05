@@ -35,6 +35,8 @@ defmodule XoWeb.Router do
       #
       # If an authenticated user must *not* be present:
       # on_mount {XoWeb.LiveUserAuth, :live_no_user}
+
+      live "/games/:id", GameLive
     end
   end
 
