@@ -74,6 +74,17 @@ defmodule Xo.Accounts.User do
       # Uses the information from the token to create or sign in the user
       change AshAuthentication.Strategy.MagicLink.SignInChange
 
+      # Default name from email for new users signing up via magic link
+      change fn changeset, _context ->
+        if Ash.Changeset.get_attribute(changeset, :name) do
+          changeset
+        else
+          email = Ash.Changeset.get_attribute(changeset, :email)
+          name = if email, do: email |> to_string() |> String.split("@") |> hd(), else: "User"
+          Ash.Changeset.force_change_attribute(changeset, :name, name)
+        end
+      end
+
       change {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange,
               strategy_name: :remember_me}
 
