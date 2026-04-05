@@ -181,6 +181,40 @@ defmodule Xo.Games.PubSubTest do
     end
   end
 
+  describe "lobby topic" do
+    test "create publishes to game:lobby" do
+      subscribe("game:lobby")
+
+      player = generate(user())
+      Games.create_game!(actor: player)
+
+      assert_notification(:create)
+    end
+
+    test "join publishes to game:lobby" do
+      player_o = generate(user())
+      game = Games.create_game!(actor: player_o)
+
+      subscribe("game:lobby")
+
+      player_x = generate(user())
+      Games.join!(game, actor: player_x)
+
+      assert_notification(:join)
+    end
+
+    test "destroy publishes to game:lobby" do
+      player = generate(user())
+      game = Games.create_game!(actor: player)
+
+      subscribe("game:lobby")
+
+      Ash.destroy!(game, authorize?: false)
+
+      assert_notification(:destroy)
+    end
+  end
+
   describe "destroy publishes to both topics" do
     test "publishes to game:activity:<id>" do
       player = generate(user())

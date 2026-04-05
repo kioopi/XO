@@ -17,6 +17,7 @@ defmodule Xo.Games.Game do
     defaults [:read, :destroy]
 
     read :open, filter: expr(state == :open)
+    read :active, filter: expr(state == :active)
 
     create :create do
       change relate_actor(:player_o, allow_nil?: false)

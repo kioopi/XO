@@ -65,6 +65,31 @@ defmodule Xo.Games.GameTest do
     end
   end
 
+  describe "active read action" do
+    test "returns only games with both players (active state)" do
+      player_o = generate(user())
+      player_x = generate(user())
+
+      # Create an open game (should NOT appear)
+      _open_game = generate(game(actor: generate(user())))
+
+      # Create an active game (should appear)
+      active_game = generate(game(actor: player_o))
+      Ash.update!(active_game, %{}, action: :join, actor: player_x, authorize?: true)
+
+      games = Ash.read!(Xo.Games.Game, action: :active)
+
+      assert length(games) == 1
+      assert hd(games).id == active_game.id
+    end
+
+    test "returns empty list when no active games" do
+      _open_game = generate(game())
+
+      assert Ash.read!(Xo.Games.Game, action: :active) == []
+    end
+  end
+
   describe "join action" do
     test "second user can join an open game as player_x" do
       game = generate(game())
