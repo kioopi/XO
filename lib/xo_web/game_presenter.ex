@@ -1,4 +1,4 @@
-defmodule XOWeb.GamePresenter do
+defmodule XoWeb.GamePresenter do
   @moduledoc """
   Shapes domain Game data for UI display.
 

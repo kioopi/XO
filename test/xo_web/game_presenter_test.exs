@@ -1,7 +1,7 @@
-defmodule XOWeb.GamePresenterTest do
+defmodule XoWeb.GamePresenterTest do
   use ExUnit.Case, async: true
 
-  alias XOWeb.GamePresenter
+  alias XoWeb.GamePresenter
 
   # Minimal structs for testing — no database needed
   defp game(attrs \\ %{}) do

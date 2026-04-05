@@ -1,4 +1,4 @@
-defmodule XOWeb.GameUI do
+defmodule XoWeb.GameUI do
   @moduledoc """
   Shared layout primitives for game pages.
   """
