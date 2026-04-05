@@ -36,6 +36,7 @@ defmodule XoWeb.Router do
       # If an authenticated user must *not* be present:
       # on_mount {XoWeb.LiveUserAuth, :live_no_user}
 
+      live "/", LobbyLive
       live "/games/:id", GameLive
     end
   end
@@ -43,7 +44,8 @@ defmodule XoWeb.Router do
   scope "/", XoWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+
+    get "/demo-sign-in/:player", AuthController, :demo_sign_in
     auth_routes AuthController, Xo.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
