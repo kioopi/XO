@@ -29,6 +29,9 @@ config :xo, Xo.Mailer, adapter: Swoosh.Adapters.Test
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 
+# Disable the AI commentator in tests (it spawns processes that can't access the sandbox)
+config :xo, commentator_enabled: false
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

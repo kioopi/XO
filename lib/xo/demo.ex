@@ -150,29 +150,20 @@ defmodule Xo.Demo do
   @doc """
   Print an ASCII representation of the current board.
 
-  Played fields show `X` or `O`, empty fields show their number (0-8).
+  Played fields show `X` or `O` (color-coded), empty fields show their number (0-8).
+  Uses `Xo.Games.GameSummary.board_text/1` for layout, then applies ANSI colors.
   """
   def board(game) do
     game = Ash.load!(game, :board)
 
-    cells =
-      game.board
-      |> Enum.with_index()
-      |> Enum.map(fn
-        {:x, _i} -> "#{@green}X#{@reset}"
-        {:o, _i} -> "#{@yellow}O#{@reset}"
-        {nil, i} -> "#{@dim}#{i}#{@reset}"
-      end)
-
-    rows = Enum.chunk_every(cells, 3)
+    colored =
+      Xo.Games.GameSummary.board_text(game)
+      |> String.replace("X", "#{@green}X#{@reset}")
+      |> String.replace("O", "#{@yellow}O#{@reset}")
+      |> String.replace("_", "#{@dim}_#{@reset}")
 
     IO.puts("")
-
-    rows
-    |> Enum.map(fn [a, b, c] -> "   #{a} #{@dim}|#{@reset} #{b} #{@dim}|#{@reset} #{c}" end)
-    |> Enum.intersperse("  #{@dim}---+---+---#{@reset}")
-    |> Enum.each(&IO.puts/1)
-
+    IO.puts(colored)
     IO.puts("")
     :ok
   end

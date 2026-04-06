@@ -4,9 +4,12 @@ defmodule Xo.Games.Game do
     domain: Xo.Games,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    notifiers: [Ash.Notifier.PubSub]
+    notifiers: [Ash.Notifier.PubSub],
+    fragments: [__MODULE__.Commentator]
 
   alias Xo.Accounts.User
+  alias Xo.Games.Validations.ValidateGameState
+  alias Xo.Games.Changes
 
   postgres do
     table "games"
@@ -33,8 +36,9 @@ defmodule Xo.Games.Game do
       description "Join an open game as player X."
       require_atomic? false
 
-      validate {Xo.Games.Validations.ValidateGameState, states: [:open]}
+      validate {ValidateGameState, states: [:open]}
       change relate_actor(:player_x, allow_nil?: false)
+      change Changes.StartCommentator
     end
 
     update :make_move do
@@ -47,8 +51,8 @@ defmodule Xo.Games.Game do
         constraints min: 0, max: 8
       end
 
-      validate {Xo.Games.Validations.ValidateGameState, states: :active}
-      change Xo.Games.Changes.CreateMove
+      validate {ValidateGameState, states: :active}
+      change Changes.CreateMove
     end
   end
 

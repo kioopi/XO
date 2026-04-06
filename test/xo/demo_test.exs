@@ -72,12 +72,16 @@ defmodule Xo.DemoTest do
       %{game: active_game, player_o: player_o, player_x: player_x}
     end
 
-    test "renders empty board with field numbers", %{game: game} do
+    test "renders empty board with labeled axes and underscores", %{game: game} do
       output = capture_io(fn -> assert Demo.board(game) == :ok end)
 
-      for i <- 0..8 do
+      # Column headers and row labels
+      for i <- 0..2 do
         assert output =~ "#{i}"
       end
+
+      # Empty cells shown as underscores
+      assert output =~ "_"
     end
 
     test "renders X and O for played fields", %{

@@ -22,6 +22,20 @@ end
 
 config :xo, XoWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# AI Commentator LLM configuration.
+# Provider: "openai" or "anthropic" (default: "anthropic")
+# Note: The tools-based commentary mode (COMMENTATOR_USE_TOOLS=true) requires OpenAI
+# due to an upstream bug in ash_ai 0.5.0. See docs/ash_ai_additional_properties_bug.md.
+case System.get_env("LLM_PROVIDER", "anthropic") do
+  "openai" -> config :xo, llm_provider: :openai
+  _ -> config :xo, llm_provider: :anthropic
+end
+
+config :xo,
+  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY"),
+  openai_api_key: System.get_env("OPENAI_API_KEY"),
+  commentator_use_tools: System.get_env("COMMENTATOR_USE_TOOLS") == "true"
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

@@ -42,6 +42,7 @@ defmodule Xo.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:ash_ai, "~> 0.5"},
       {:picosat_elixir, "~> 0.2"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:usage_rules, "~> 1.0", only: [:dev]},

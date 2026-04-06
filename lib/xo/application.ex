@@ -12,8 +12,9 @@ defmodule Xo.Application do
       Xo.Repo,
       {DNSCluster, query: Application.get_env(:xo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Xo.PubSub},
-      # Start a worker by calling: Xo.Worker.start_link(arg)
-      # {Xo.Worker, arg},
+      {Registry, keys: :unique, name: Xo.Games.CommentatorRegistry},
+      {Task.Supervisor, name: Xo.Games.CommentatorTaskSupervisor},
+      {DynamicSupervisor, name: Xo.Games.CommentatorSupervisor, strategy: :one_for_one},
       # Start to serve requests, typically the last entry
       XoWeb.Endpoint,
       {AshAuthentication.Supervisor, [otp_app: :xo]}

@@ -127,6 +127,50 @@ Demo.show(game)
 Demo.board(game)
 ```
 
+### AI Commentator
+
+The game features an AI commentator powered by [AshAi](https://hexdocs.pm/ash_ai) that joins the chat panel and reacts to moves with witty commentary. It demonstrates:
+
+- **Prompt-backed actions** — An Ash generic action where the implementation is an LLM call via `AshAi.Actions.prompt/2`
+- **AshAi tools** — Exposing Ash read actions as tools the LLM can call to query game state
+- **OTP integration** — A per-game `GenServer` subscribes to PubSub events and spawns async tasks for LLM calls
+
+To enable the commentator, set an API key for your chosen LLM provider:
+
+```bash
+# Using Anthropic (default)
+ANTHROPIC_API_KEY=sk-ant-... mix phx.server
+
+# Using OpenAI
+LLM_PROVIDER=openai OPENAI_API_KEY=sk-... mix phx.server
+```
+
+#### Commentary Modes
+
+The commentator supports two modes, controlled by the `COMMENTATOR_USE_TOOLS` environment variable:
+
+- **Direct context** (default): The commentator loads game state and passes it as text to the LLM. Works with any provider.
+- **AshAi tools** (`COMMENTATOR_USE_TOOLS=true`): The LLM uses AshAi tool definitions (`read_game`, `read_moves`) to query game data itself, showcasing AshAi's tool integration.
+
+```bash
+# AshAi tools mode with OpenAI (recommended — showcases tool integration)
+LLM_PROVIDER=openai OPENAI_API_KEY=sk-... COMMENTATOR_USE_TOOLS=true mix phx.server
+
+# AshAi tools mode with Anthropic (blocked by upstream bug, see below)
+ANTHROPIC_API_KEY=sk-ant-... COMMENTATOR_USE_TOOLS=true mix phx.server
+```
+
+> **Note:** The tools mode with Anthropic currently hits an upstream bug in `ash_ai` 0.5.0 where nested object schemas in tool definitions are missing `additionalProperties: false`, which the Anthropic API strictly requires. Use OpenAI for the tools mode, or use the default direct context mode with Anthropic. See `docs/ash_ai_additional_properties_bug.md` for details.
+
+#### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `anthropic` | LLM provider: `anthropic` or `openai` |
+| `ANTHROPIC_API_KEY` | — | API key for Anthropic (required when provider is `anthropic`) |
+| `OPENAI_API_KEY` | — | API key for OpenAI (required when provider is `openai`) |
+| `COMMENTATOR_USE_TOOLS` | `false` | Set to `true` to use AshAi tools mode |
+
 ## Project Structure
 
 ```
@@ -137,12 +181,15 @@ lib/xo/
   games/
     game.ex              # Game resource (actions, policies, calculations, pubsub)
     move.ex              # Move resource (field, move_number, validations)
+    message.ex           # Chat message resource with pubsub
+    commentator.ex       # AI commentator GenServer (subscribes to game events)
+    commentator_bot.ex   # Bot user management (creates/caches the bot user)
     calculations/        # GameState, WinnerId, Board, AvailableFields
-    changes/             # CreateMove
+    changes/             # CreateMove, StartCommentator
     validations/         # ValidateGameState
     move/changes/        # LoadGame, SetMoveNumber
     move/validations/    # ValidatePlayerTurn
-  games.ex               # Games domain with code interface
+  games.ex               # Games domain with AshAi tools and code interface
   accounts.ex            # Accounts domain
   demo.ex                # IEx REPL helpers
 ```
@@ -150,6 +197,7 @@ lib/xo/
 ## Learn More
 
 - [Ash Framework](https://hexdocs.pm/ash) — The declarative framework powering this project
+- [AshAi](https://hexdocs.pm/ash_ai) — AI integration with prompt-backed actions and LLM tools
 - [Ash PubSub](https://hexdocs.pm/ash/Ash.Notifier.PubSub.html) — Built-in notifier for real-time events
 - [AshAuthentication](https://hexdocs.pm/ash_authentication) — Authentication strategies
 - [AshPostgres](https://hexdocs.pm/ash_postgres) — PostgreSQL data layer
