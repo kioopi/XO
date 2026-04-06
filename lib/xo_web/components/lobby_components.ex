@@ -5,6 +5,48 @@ defmodule XoWeb.LobbyComponents do
   use Phoenix.Component
   use XoWeb, :verified_routes
 
+  attr :current_user, :any, default: nil
+
+  def player_status(%{current_user: nil} = assigns) do
+    ~H"""
+    <div class="card card-border bg-base-100 shadow-sm mb-6">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-base-content/60">Not signed in</span>
+          <div class="flex items-center gap-2">
+            <.link navigate={~p"/sign-in"} class="btn btn-sm btn-outline">
+              Sign in with magic link
+            </.link>
+            <.link href="/demo-sign-in/x" class="btn btn-sm btn-primary">
+              Play as Xavier (X)
+            </.link>
+            <.link href="/demo-sign-in/o" class="btn btn-sm btn-secondary">
+              Play as Olga (O)
+            </.link>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def player_status(assigns) do
+    ~H"""
+    <div class="card card-border bg-base-100 shadow-sm mb-6">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between">
+          <span>
+            Signed in as <span class="font-semibold">{@current_user.name}</span>
+          </span>
+          <.link href={~p"/sign-out"} class="btn btn-sm btn-ghost">
+            Sign out
+          </.link>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :state, :atom, required: true
 
   def game_state_badge(assigns) do

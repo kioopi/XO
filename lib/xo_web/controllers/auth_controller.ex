@@ -44,6 +44,36 @@ defmodule XoWeb.AuthController do
     |> redirect(to: ~p"/sign-in")
   end
 
+  def demo_sign_in(conn, %{"player" => player}) do
+    {name, email} =
+      case player do
+        "x" -> {"Xavier", "xavier@example.com"}
+        "o" -> {"Olga", "olga@example.com"}
+      end
+
+    # Ensure the demo user exists
+    Xo.Accounts.User
+    |> Ash.Changeset.for_create(:demo_create, %{name: name, email: email})
+    |> Ash.create(upsert?: true)
+
+    input =
+      Ash.ActionInput.for_action(Xo.Accounts.User, :demo_sign_in, %{name: name, email: email})
+
+    case Ash.run_action(input) do
+      {:ok, user} ->
+        conn
+        |> store_in_session(user)
+        |> assign(:current_user, user)
+        |> put_flash(:info, "Signed in as #{name}")
+        |> redirect(to: ~p"/")
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Could not sign in as #{name}")
+        |> redirect(to: ~p"/")
+    end
+  end
+
   def sign_out(conn, _params) do
     return_to = get_session(conn, :return_to) || ~p"/"
 

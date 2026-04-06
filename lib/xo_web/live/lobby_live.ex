@@ -84,6 +84,8 @@ defmodule XoWeb.LobbyLive do
       </:actions>
     </.page_header>
 
+    <.player_status current_user={@current_user} />
+
     <.section title="Open Games">
       <%= if @open_games == [] do %>
         <.empty_state message="No open games yet" />
