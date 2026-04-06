@@ -1,4 +1,6 @@
 defmodule Xo.Accounts do
+  @moduledoc "Manages user accounts and authentication."
+
   use Ash.Domain, otp_app: :xo, extensions: [AshAdmin.Domain]
 
   admin do

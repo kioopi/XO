@@ -1,4 +1,6 @@
 defmodule Xo.Games do
+  @moduledoc "Manages tic-tac-toe games, moves, and gameplay."
+
   use Ash.Domain,
     otp_app: :xo
 

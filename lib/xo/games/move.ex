@@ -13,6 +13,7 @@ defmodule Xo.Games.Move do
     defaults [:read]
 
     create :create do
+      description "Record a move in a game."
       primary? true
       accept [:field, :game_id]
 
@@ -27,11 +28,13 @@ defmodule Xo.Games.Move do
     integer_primary_key :id
 
     attribute :field, :integer do
+      description "Board position (0-8) where the move is placed."
       allow_nil? false
       public? true
     end
 
     attribute :move_number, :integer do
+      description "Sequential move number within the game, starting at 1."
       allow_nil? false
       public? true
     end
@@ -41,12 +44,14 @@ defmodule Xo.Games.Move do
 
   relationships do
     belongs_to :player, Xo.Accounts.User do
+      description "The user who made this move."
       public? true
       allow_nil? false
       attribute_type :integer
     end
 
     belongs_to :game, Xo.Games.Game do
+      description "The game this move belongs to."
       public? true
       allow_nil? false
       attribute_type :integer
@@ -54,7 +59,10 @@ defmodule Xo.Games.Move do
   end
 
   identities do
-    identity :unique_field_per_game, [:game_id, :field]
-    identity :unique_move_number_per_game, [:game_id, :move_number]
+    identity :unique_field_per_game, [:game_id, :field],
+      description: "Each board position can only be played once per game."
+
+    identity :unique_move_number_per_game, [:game_id, :move_number],
+      description: "Each move number is unique within a game."
   end
 end
