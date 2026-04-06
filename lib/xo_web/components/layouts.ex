@@ -31,20 +31,21 @@ defmodule XoWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
-  slot :inner_block, required: true
+  attr :inner_content, :any, required: true
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
+    <header class="navbar px-4 sm:px-6 lg:px-8 border-b border-base-200">
       <div class="flex-1">
-        <a href="/" class="flex items-center gap-2">
-          <span class="text-xl font-bold">XO</span>
+        <a href="/" class="flex items-center gap-2 group">
+          <span class="inline-block w-3 h-3 rounded-sm bg-primary rotate-45 group-hover:rotate-[225deg] transition-transform duration-300" />
+          <span class="text-3xl font-bold tracking-tight">XO</span>
         </a>
       </div>
       <div class="flex-none">
         <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li :if={@current_scope} class="text-sm text-base-content/60">
-            {@current_scope.email}
+          <li :if={assigns[:current_user]} class="text-sm text-base-content/50 font-medium">
+            {assigns[:current_user].name}
           </li>
           <li>
             <.theme_toggle />
@@ -53,9 +54,9 @@ defmodule XoWeb.Layouts do
       </div>
     </header>
 
-    <main class="px-4 py-8 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-3xl">
-        {render_slot(@inner_block)}
+    <main class="px-4 py-10 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        {@inner_content}
       </div>
     </main>
 

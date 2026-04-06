@@ -76,9 +76,9 @@ defmodule XoWeb.LobbyLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <.page_header title="XO">
+    <.page_header title="Lobby">
       <:actions>
-        <button :if={@current_user} phx-click="create_game" class="btn btn-primary btn-sm">
+        <button :if={@current_user} phx-click="create_game" class="btn btn-primary btn-md rounded-xl">
           New Game
         </button>
       </:actions>

@@ -10,8 +10,8 @@ defmodule XoWeb.GameUI do
 
   def page_header(assigns) do
     ~H"""
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold">{@title}</h1>
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold tracking-tight">{@title}</h1>
       <div :if={@actions != []} class="flex items-center gap-2">
         {render_slot(@actions)}
       </div>
@@ -24,8 +24,10 @@ defmodule XoWeb.GameUI do
 
   def section(assigns) do
     ~H"""
-    <div class="mb-8">
-      <h2 class="text-lg font-semibold mb-3">{@title}</h2>
+    <div class="mb-10">
+      <h2 class="text-xl font-semibold tracking-tight text-base-content/80 mb-4 border-l-4 border-primary pl-3">
+        {@title}
+      </h2>
       {render_slot(@inner_block)}
     </div>
     """
@@ -36,8 +38,8 @@ defmodule XoWeb.GameUI do
 
   def empty_state(assigns) do
     ~H"""
-    <div class="text-center py-8 text-base-content/60">
-      <p>{@message}</p>
+    <div class="text-center py-12 text-base-content/50">
+      <p class="text-lg">{@message}</p>
       <div :if={@actions != []} class="mt-4">
         {render_slot(@actions)}
       </div>

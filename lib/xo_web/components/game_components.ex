@@ -11,9 +11,9 @@ defmodule XoWeb.GameComponents do
   def game_header(assigns) do
     ~H"""
     <div class="flex items-center gap-3 mb-2">
-      <h2 class="text-xl font-bold">Game #{@game.id}</h2>
+      <h2 class="text-2xl font-bold tracking-tight">Game #{@game.id}</h2>
       <.game_state_badge state={@game.state} />
-      <span class="text-sm text-base-content/60">
+      <span class="text-sm text-base-content/50 font-medium">
         {role_label(@role)}
       </span>
     </div>
@@ -28,7 +28,7 @@ defmodule XoWeb.GameComponents do
 
   defp game_state_badge(assigns) do
     ~H"""
-    <span class={["badge badge-sm", badge_class(@state)]}>
+    <span class={["badge badge-sm font-semibold", badge_class(@state)]}>
       {@state}
     </span>
     """
@@ -41,11 +41,15 @@ defmodule XoWeb.GameComponents do
   defp badge_class(_), do: "badge-ghost"
 
   attr :status_text, :string, required: true
+  attr :game_state, :atom, default: :active
 
   def game_status_banner(assigns) do
     ~H"""
-    <div class="alert mb-4">
-      <span class="text-lg font-medium">{@status_text}</span>
+    <div class={[
+      "text-center py-4 px-6 rounded-2xl mb-6 bg-base-200/60",
+      @game_state in [:won, :draw] && "animate-celebrate"
+    ]}>
+      <span class="text-2xl font-bold tracking-tight">{@status_text}</span>
     </div>
     """
   end
@@ -53,16 +57,22 @@ defmodule XoWeb.GameComponents do
   attr :board, :list, required: true
   attr :clickable_fields, :list, required: true
   attr :disabled, :boolean, default: false
+  attr :current_mark, :atom, default: nil
+  attr :winning_cells, :list, default: []
 
   def board(assigns) do
     ~H"""
-    <div class="grid grid-cols-3 gap-1 w-full max-w-xs mx-auto aspect-square">
-      <.board_cell
-        :for={{value, index} <- Enum.with_index(@board)}
-        value={value}
-        index={index}
-        clickable={not @disabled and index in @clickable_fields}
-      />
+    <div class="bg-base-300 p-2.5 rounded-2xl shadow-lg max-w-sm mx-auto">
+      <div class="grid grid-cols-3 gap-2 w-full aspect-square">
+        <.board_cell
+          :for={{value, index} <- Enum.with_index(@board)}
+          value={value}
+          index={index}
+          clickable={not @disabled and index in @clickable_fields}
+          current_mark={@current_mark}
+          winning={index in @winning_cells}
+        />
+      </div>
     </div>
     """
   end
@@ -70,29 +80,47 @@ defmodule XoWeb.GameComponents do
   attr :value, :atom, required: true
   attr :index, :integer, required: true
   attr :clickable, :boolean, required: true
+  attr :current_mark, :atom, default: nil
+  attr :winning, :boolean, default: false
 
   def board_cell(assigns) do
     ~H"""
     <button
       class={[
-        "flex items-center justify-center aspect-square rounded-lg text-3xl font-bold",
-        "min-h-16 min-w-16",
-        cell_style(@value, @clickable)
+        "flex items-center justify-center aspect-square rounded-xl text-5xl md:text-6xl font-bold",
+        "transition-all duration-200",
+        cell_style(@value, @clickable),
+        @clickable && "cell-clickable",
+        @winning && "animate-win-glow"
       ]}
       disabled={not @clickable}
       phx-click={@clickable && "make_move"}
       phx-value-field={@clickable && @index}
     >
-      <span :if={@value == :o} class="text-primary">O</span>
-      <span :if={@value == :x} class="text-secondary">X</span>
-      <span :if={is_nil(@value) and @clickable} class="text-base-content/20">·</span>
+      <span :if={@value == :o} class="text-primary animate-mark-pop">O</span>
+      <span :if={@value == :x} class="text-secondary animate-mark-pop">X</span>
+      <%= if is_nil(@value) and @clickable do %>
+        <span class={["ghost-mark", ghost_mark_color(@current_mark)]}>
+          {ghost_mark_label(@current_mark)}
+        </span>
+      <% end %>
     </button>
     """
   end
 
-  defp cell_style(nil, true), do: "bg-base-200 hover:bg-base-300 cursor-pointer"
-  defp cell_style(nil, false), do: "bg-base-200"
-  defp cell_style(_mark, _), do: "bg-base-200"
+  defp cell_style(nil, true),
+    do: "bg-base-100 hover:bg-base-200 cursor-pointer hover:scale-[1.03]"
+
+  defp cell_style(nil, false), do: "bg-base-100"
+  defp cell_style(_mark, _), do: "bg-base-100"
+
+  defp ghost_mark_color(:o), do: "text-primary"
+  defp ghost_mark_color(:x), do: "text-secondary"
+  defp ghost_mark_color(_), do: "text-base-content/30"
+
+  defp ghost_mark_label(:o), do: "O"
+  defp ghost_mark_label(:x), do: "X"
+  defp ghost_mark_label(_), do: ""
 
   attr :game, :any, required: true
   attr :role, :atom, required: true
@@ -118,7 +146,7 @@ defmodule XoWeb.GameComponents do
       <%= if @player_x_display do %>
         <.player_card {@player_x_display} />
       <% else %>
-        <div class="card card-border bg-base-100 p-4 text-center text-base-content/50">
+        <div class="card bg-base-100 p-4 text-center text-base-content/40 rounded-xl border border-dashed border-base-300">
           Waiting for opponent...
         </div>
       <% end %>
@@ -135,17 +163,24 @@ defmodule XoWeb.GameComponents do
   def player_card(assigns) do
     ~H"""
     <div class={[
-      "card card-border bg-base-100 p-4 flex-row items-center gap-3",
-      @is_turn && "ring-2 ring-primary",
-      @is_winner && "ring-2 ring-success"
+      "card bg-base-100 p-4 flex-row items-center gap-3 rounded-xl transition-all duration-300",
+      @is_turn && !@is_winner && turn_pulse_class(@mark),
+      @is_turn && !@is_winner && turn_ring_class(@mark),
+      @is_winner && "ring-2 ring-success animate-win-glow",
+      !@is_turn && !@is_winner && "border border-base-200"
     ]}>
-      <span class={["text-xl font-bold", mark_color(@mark)]}>
+      <span class={["text-3xl font-black", mark_color(@mark)]}>
         {mark_label(@mark)}
       </span>
-      <span class="font-medium">{@name}</span>
-      <span :if={@is_you} class="badge badge-sm badge-ghost">You</span>
-      <span :if={@is_turn} class="badge badge-sm badge-primary">Turn</span>
-      <span :if={@is_winner} class="badge badge-sm badge-success">Winner</span>
+      <span class="font-semibold flex-1">{@name}</span>
+      <span :if={@is_you} class="badge badge-sm badge-ghost font-medium">You</span>
+      <span
+        :if={@is_turn && !@is_winner}
+        class={["badge badge-sm font-medium", turn_badge_class(@mark)]}
+      >
+        Turn
+      </span>
+      <span :if={@is_winner} class="badge badge-sm badge-success font-medium">Winner</span>
     </div>
     """
   end
@@ -156,21 +191,30 @@ defmodule XoWeb.GameComponents do
   defp mark_color(:o), do: "text-primary"
   defp mark_color(:x), do: "text-secondary"
 
+  defp turn_ring_class(:o), do: "ring-2 ring-primary"
+  defp turn_ring_class(:x), do: "ring-2 ring-secondary"
+
+  defp turn_pulse_class(:o), do: "animate-turn-pulse"
+  defp turn_pulse_class(:x), do: "animate-turn-pulse-x"
+
+  defp turn_badge_class(:o), do: "badge-primary"
+  defp turn_badge_class(:x), do: "badge-secondary"
+
   attr :game, :any, required: true
   attr :role, :atom, required: true
   attr :current_user, :any, default: nil
 
   def action_bar(assigns) do
     ~H"""
-    <div class="flex gap-2 mt-4">
+    <div class="flex gap-3 mt-4">
       <button
         :if={show_join_button?(@game, @current_user)}
         phx-click="join_game"
-        class="btn btn-primary"
+        class="btn btn-primary btn-lg rounded-xl flex-1"
       >
         Join Game
       </button>
-      <.link navigate={~p"/"} class="btn btn-ghost">
+      <.link navigate={~p"/"} class="btn btn-ghost rounded-xl">
         ← Back to Lobby
       </.link>
     </div>

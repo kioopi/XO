@@ -95,6 +95,19 @@ defmodule XoWeb.GamePresenter do
     end
   end
 
+  def winning_cells(%{state: :won, board: board}) do
+    o_fields = for {val, idx} <- Enum.with_index(board), val == :o, do: idx
+    x_fields = for {val, idx} <- Enum.with_index(board), val == :x, do: idx
+
+    Xo.Games.WinChecker.winning_combinations()
+    |> Enum.find(fn combo ->
+      Enum.all?(combo, &(&1 in o_fields)) or Enum.all?(combo, &(&1 in x_fields))
+    end)
+    |> Kernel.||([])
+  end
+
+  def winning_cells(_game), do: []
+
   defp next_player_name(game) do
     if game.next_player_id == game.player_o_id do
       game.player_o.name

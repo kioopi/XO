@@ -75,6 +75,8 @@ defmodule XoWeb.GameLive do
     |> assign(:role, role)
     |> assign(:clickable_fields, GamePresenter.clickable_fields(game, user))
     |> assign(:status_text, GamePresenter.status_text(game, user))
+    |> assign(:current_mark, GamePresenter.your_mark(game, user))
+    |> assign(:winning_cells, GamePresenter.winning_cells(game))
     |> assign(:page_title, "Game ##{game.id}")
   end
 
@@ -83,19 +85,23 @@ defmodule XoWeb.GameLive do
     ~H"""
     <.page_header title={"Game ##{@game.id}"}>
       <:actions>
-        <.link navigate={~p"/"} class="btn btn-ghost btn-sm">
+        <.link navigate={~p"/"} class="btn btn-ghost btn-sm rounded-xl">
           ← Lobby
         </.link>
       </:actions>
     </.page_header>
 
-    <.game_status_banner status_text={@status_text} />
-
-    <div class="flex flex-col md:flex-row gap-6">
-      <div class="flex-1">
-        <.board board={@game.board} clickable_fields={@clickable_fields} />
+    <div class="flex flex-col lg:flex-row gap-8">
+      <div class="flex-1 flex flex-col items-center gap-6">
+        <.game_status_banner status_text={@status_text} game_state={@game.state} />
+        <.board
+          board={@game.board}
+          clickable_fields={@clickable_fields}
+          current_mark={@current_mark}
+          winning_cells={@winning_cells}
+        />
       </div>
-      <div class="w-full md:w-64 flex flex-col gap-4">
+      <div class="w-full lg:w-72 flex flex-col gap-4">
         <.game_header game={@game} role={@role} />
         <.players_panel game={@game} role={@role} current_user={@current_user} />
         <.action_bar game={@game} role={@role} current_user={@current_user} />
