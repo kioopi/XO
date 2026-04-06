@@ -24,10 +24,17 @@ defmodule XoWeb.GameLive do
   def mount(%{"id" => game_id}, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Xo.PubSub, "game:#{game_id}")
+      Phoenix.PubSub.subscribe(Xo.PubSub, "game:chat:#{game_id}")
     end
 
     game = Games.get_by_id!(game_id, load: @game_loads, authorize?: false)
-    socket = assign_game_data(socket, game)
+    messages = Games.list_messages!(game_id, load: [:user], authorize?: false)
+
+    socket =
+      socket
+      |> assign_game_data(game)
+      |> assign(:messages, messages)
+      |> assign(:message_form, new_message_form(game.id, socket.assigns.current_user))
 
     {:ok, socket}
   end
@@ -60,10 +67,41 @@ defmodule XoWeb.GameLive do
     end
   end
 
+  def handle_event("validate_message", %{"form" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.message_form, params)
+    {:noreply, assign(socket, :message_form, to_form(form))}
+  end
+
+  def handle_event("send_message", %{"form" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.message_form, params: params) do
+      {:ok, _message} ->
+        form = new_message_form(socket.assigns.game.id, socket.assigns.current_user)
+        {:noreply, assign(socket, :message_form, form)}
+
+      {:error, form} ->
+        {:noreply, assign(socket, :message_form, to_form(form))}
+    end
+  end
+
   @impl true
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "game:chat:" <> _} = broadcast, socket) do
+    message = broadcast.payload.data
+    {:noreply, assign(socket, :messages, socket.assigns.messages ++ [message])}
+  end
+
   def handle_info(%Phoenix.Socket.Broadcast{}, socket) do
     game = Games.get_by_id!(socket.assigns.game.id, load: @game_loads, authorize?: false)
     {:noreply, assign_game_data(socket, game)}
+  end
+
+  defp new_message_form(game_id, user) do
+    Games.form_to_create_message(
+      actor: user,
+      prepare_source: fn changeset ->
+        Ash.Changeset.force_change_attribute(changeset, :game_id, game_id)
+      end
+    )
+    |> to_form()
   end
 
   defp assign_game_data(socket, game) do
@@ -105,6 +143,7 @@ defmodule XoWeb.GameLive do
         <.game_header game={@game} role={@role} />
         <.players_panel game={@game} role={@role} current_user={@current_user} />
         <.action_bar game={@game} role={@role} current_user={@current_user} />
+        <.chat_panel messages={@messages} message_form={@message_form} current_user={@current_user} />
       </div>
     </div>
     """

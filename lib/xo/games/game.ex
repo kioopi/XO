@@ -118,6 +118,7 @@ defmodule Xo.Games.Game do
     end
 
     has_many :moves, Xo.Games.Move, description: "All moves made in this game."
+    has_many :messages, Xo.Games.Message, description: "Chat messages sent during this game."
   end
 
   calculations do

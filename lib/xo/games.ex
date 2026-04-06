@@ -2,7 +2,8 @@ defmodule Xo.Games do
   @moduledoc "Manages tic-tac-toe games, moves, and gameplay."
 
   use Ash.Domain,
-    otp_app: :xo
+    otp_app: :xo,
+    extensions: [AshPhoenix]
 
   resources do
     resource Xo.Games.Game do
@@ -15,5 +16,10 @@ defmodule Xo.Games do
     end
 
     resource Xo.Games.Move
+
+    resource Xo.Games.Message do
+      define :create_message, action: :create, args: [:body]
+      define :list_messages, action: :by_game, args: [:game_id]
+    end
   end
 end

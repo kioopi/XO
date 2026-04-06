@@ -5,6 +5,8 @@ defmodule XoWeb.GameComponents do
   use Phoenix.Component
   use XoWeb, :verified_routes
 
+  import XoWeb.CoreComponents
+
   attr :game, :any, required: true
   attr :role, :atom, required: true
 
@@ -225,5 +227,44 @@ defmodule XoWeb.GameComponents do
 
   defp show_join_button?(game, user) do
     game.state == :open and user.id != game.player_o_id
+  end
+
+  attr :messages, :list, required: true
+  attr :message_form, :any, required: true
+  attr :current_user, :any, default: nil
+
+  def chat_panel(assigns) do
+    ~H"""
+    <div class="card bg-base-100 rounded-xl border border-base-200 mt-4 flex flex-col max-h-80">
+      <div class="px-4 py-3 border-b border-base-200">
+        <h3 class="font-semibold text-sm">Chat</h3>
+      </div>
+      <div
+        id="chat-messages"
+        class="flex-1 overflow-y-auto px-4 py-2 space-y-2"
+        phx-hook="ScrollBottom"
+      >
+        <p :if={@messages == []} class="text-sm text-base-content/40 text-center py-4">
+          No messages yet
+        </p>
+        <div :for={msg <- @messages} class="text-sm">
+          <span class="font-semibold">{msg.user.name}</span>
+          <span class="text-base-content/70">{msg.body}</span>
+        </div>
+      </div>
+      <div :if={@current_user} class="px-4 py-3 border-t border-base-200">
+        <.form for={@message_form} phx-submit="send_message" phx-change="validate_message" class="flex gap-2">
+          <.input
+            field={@message_form[:body]}
+            placeholder="Type a message..."
+            class="input input-sm input-bordered flex-1 rounded-lg"
+            autocomplete="off"
+            maxlength="500"
+          />
+          <button type="submit" class="btn btn-sm btn-primary rounded-lg">Send</button>
+        </.form>
+      </div>
+    </div>
+    """
   end
 end

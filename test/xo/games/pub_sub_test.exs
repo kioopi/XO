@@ -215,6 +215,61 @@ defmodule Xo.Games.PubSubTest do
     end
   end
 
+  describe "message create publishes to chat topic" do
+    test "publishes to game:chat:<game_id> with user loaded" do
+      player_o = generate(user())
+      player_x = generate(user())
+
+      game =
+        Games.create_game!(actor: player_o)
+        |> Games.join!(actor: player_x)
+
+      subscribe("game:chat:#{game.id}")
+
+      Games.create_message!("hello", %{game_id: game.id}, actor: player_o)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: topic,
+        event: "create",
+        payload: %Ash.Notifier.Notification{data: message}
+      }
+
+      assert topic == "game:chat:#{game.id}"
+      assert message.body == "hello"
+      assert message.user.name == player_o.name
+    end
+
+    test "does not publish to game:<game_id> on message create" do
+      player_o = generate(user())
+      player_x = generate(user())
+
+      game =
+        Games.create_game!(actor: player_o)
+        |> Games.join!(actor: player_x)
+
+      subscribe("game:#{game.id}")
+
+      Games.create_message!("hello", %{game_id: game.id}, actor: player_o)
+
+      refute_notification()
+    end
+
+    test "does not publish to game:lobby on message create" do
+      player_o = generate(user())
+      player_x = generate(user())
+
+      game =
+        Games.create_game!(actor: player_o)
+        |> Games.join!(actor: player_x)
+
+      subscribe("game:lobby")
+
+      Games.create_message!("hello", %{game_id: game.id}, actor: player_o)
+
+      refute_notification()
+    end
+  end
+
   describe "destroy publishes to both topics" do
     test "publishes to game:activity:<id>" do
       player = generate(user())
