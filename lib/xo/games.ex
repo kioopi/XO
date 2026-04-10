@@ -4,7 +4,7 @@ defmodule Xo.Games do
   use Ash.Domain,
     otp_app: :xo,
     extensions: [AshPhoenix],
-    fragments: [__MODULE__.CommentatorDomain]
+    fragments: [Xo.Games.Commentator.DomainFragment]
 
   resources do
     resource Xo.Games.Game do

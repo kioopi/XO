@@ -1,4 +1,4 @@
-defmodule Xo.Games.Game.Commentator do
+defmodule Xo.Games.Commentator.GameFragment do
   use Spark.Dsl.Fragment,
     of: Ash.Resource,
     authorizers: [Ash.Policy.Authorizer]
@@ -28,7 +28,7 @@ defmodule Xo.Games.Game.Commentator do
         description "What just happened in the game."
       end
 
-      run Xo.Games.Actions.GenerateCommentary
+      run Xo.Games.Commentator.GenerateCommentary
     end
 
     action :generate_commentary_with_context, :string do

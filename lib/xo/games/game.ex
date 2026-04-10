@@ -5,7 +5,7 @@ defmodule Xo.Games.Game do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     notifiers: [Ash.Notifier.PubSub],
-    fragments: [__MODULE__.Commentator]
+    fragments: [Xo.Games.Commentator.GameFragment]
 
   alias Xo.Accounts.User
   alias Xo.Games.Validations.ValidateGameState
@@ -38,7 +38,7 @@ defmodule Xo.Games.Game do
 
       validate {ValidateGameState, states: [:open]}
       change relate_actor(:player_x, allow_nil?: false)
-      change Changes.StartCommentator
+      change Xo.Games.Commentator.StartCommentator
     end
 
     update :make_move do

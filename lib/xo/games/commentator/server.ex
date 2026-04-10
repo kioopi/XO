@@ -1,4 +1,4 @@
-defmodule Xo.Games.Commentator do
+defmodule Xo.Games.Commentator.Server do
   @moduledoc "Per-game GenServer that subscribes to game events and posts AI commentary to chat."
 
   use GenServer
@@ -22,7 +22,7 @@ defmodule Xo.Games.Commentator do
 
   @impl true
   def handle_continue(:greet, state) do
-    bot = Xo.Games.CommentatorBot.user()
+    bot = Xo.Games.Commentator.Bot.user()
 
     try do
       generate_and_post(

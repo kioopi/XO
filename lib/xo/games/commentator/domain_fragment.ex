@@ -1,4 +1,4 @@
-defmodule Xo.Games.CommentatorDomain do
+defmodule Xo.Games.Commentator.DomainFragment do
   use Spark.Dsl.Fragment,
     of: Ash.Domain,
     extensions: [AshAi]

@@ -1,4 +1,4 @@
-defmodule Xo.Games.Actions.GenerateCommentary do
+defmodule Xo.Games.Commentator.GenerateCommentary do
   @moduledoc """
   Dispatches commentary generation to either the tools-based or context-based action
   depending on the `:commentator_use_tools` application config.

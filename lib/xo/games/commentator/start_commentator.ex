@@ -1,4 +1,4 @@
-defmodule Xo.Games.Changes.StartCommentator do
+defmodule Xo.Games.Commentator.StartCommentator do
   @moduledoc "Starts the AI commentator GenServer when a player joins a game."
 
   use Ash.Resource.Change
@@ -10,7 +10,7 @@ defmodule Xo.Games.Changes.StartCommentator do
       if Application.get_env(:xo, :commentator_enabled, true) do
         case DynamicSupervisor.start_child(
                Xo.Games.CommentatorSupervisor,
-               {Xo.Games.Commentator, game.id}
+               {Xo.Games.Commentator.Server, game.id}
              ) do
           {:ok, _pid} ->
             :ok

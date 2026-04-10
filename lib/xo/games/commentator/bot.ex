@@ -1,4 +1,4 @@
-defmodule Xo.Games.CommentatorBot do
+defmodule Xo.Games.Commentator.Bot do
   @moduledoc "Manages the AI commentator bot user."
 
   @bot_email "commentator@xo.bot"
