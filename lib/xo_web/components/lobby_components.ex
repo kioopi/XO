@@ -66,11 +66,12 @@ defmodule XoWeb.LobbyComponents do
   attr :games, :list, required: true
   attr :current_user, :any, default: nil
   attr :variant, :atom, required: true
+  attr :strategies, :list, default: []
 
   def games_list(assigns) do
     ~H"""
     <div class="grid gap-4">
-      <.game_card :for={game <- @games} game={game} current_user={@current_user} variant={@variant} />
+      <.game_card :for={game <- @games} game={game} current_user={@current_user} variant={@variant} strategies={@strategies} />
     </div>
     """
   end
@@ -78,6 +79,7 @@ defmodule XoWeb.LobbyComponents do
   attr :game, :any, required: true
   attr :current_user, :any, default: nil
   attr :variant, :atom, required: true
+  attr :strategies, :list, default: []
 
   def game_card(assigns) do
     ~H"""
@@ -95,8 +97,8 @@ defmodule XoWeb.LobbyComponents do
             </span>
           </div>
         </div>
-        <div>
-          <.card_action game={@game} current_user={@current_user} variant={@variant} />
+        <div class="flex items-center gap-2">
+          <.card_action game={@game} current_user={@current_user} variant={@variant} strategies={@strategies} />
         </div>
       </div>
     </div>
@@ -108,6 +110,7 @@ defmodule XoWeb.LobbyComponents do
   attr :game, :any, required: true
   attr :current_user, :any, default: nil
   attr :variant, :atom, required: true
+  attr :strategies, :list, default: []
 
   defp card_action(%{variant: :open, current_user: nil} = assigns) do
     ~H"""
@@ -123,6 +126,22 @@ defmodule XoWeb.LobbyComponents do
       <.link navigate={~p"/games/#{@game.id}"} class="btn btn-sm btn-ghost rounded-lg">
         Open
       </.link>
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-sm btn-secondary rounded-lg">
+          Bot Join ▾
+        </div>
+        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+          <li :for={strategy <- @strategies}>
+            <button
+              phx-click="bot_join_game"
+              phx-value-game-id={@game.id}
+              phx-value-strategy={strategy.key}
+            >
+              {strategy.name}
+            </button>
+          </li>
+        </ul>
+      </div>
       """
     else
       ~H"""

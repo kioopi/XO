@@ -17,6 +17,7 @@ defmodule XoWeb.LobbyLive do
     socket =
       socket
       |> assign(:page_title, "Lobby")
+      |> assign(:strategies, Games.list_strategies!())
       |> load_games()
 
     {:ok, socket}
@@ -42,6 +43,19 @@ defmodule XoWeb.LobbyLive do
       user ->
         game = Games.get_by_id!(game_id)
         Games.join!(game, actor: user)
+        {:noreply, push_navigate(socket, to: ~p"/games/#{game_id}")}
+    end
+  end
+
+  def handle_event("bot_join_game", %{"game-id" => game_id, "strategy" => strategy}, socket) do
+    case socket.assigns.current_user do
+      nil ->
+        {:noreply, put_flash(socket, :error, "You must be signed in")}
+
+      user ->
+        game = Games.get_by_id!(game_id)
+        strategy = String.to_existing_atom(strategy)
+        Games.bot_join!(game, strategy, actor: user)
         {:noreply, push_navigate(socket, to: ~p"/games/#{game_id}")}
     end
   end
@@ -90,7 +104,7 @@ defmodule XoWeb.LobbyLive do
       <%= if @open_games == [] do %>
         <.empty_state message="No open games yet" />
       <% else %>
-        <.games_list games={@open_games} current_user={@current_user} variant={:open} />
+        <.games_list games={@open_games} current_user={@current_user} variant={:open} strategies={@strategies} />
       <% end %>
     </.section>
 
