@@ -1,5 +1,5 @@
 defmodule Xo.Games.Bot.BotJoinTest do
-  use Xo.DataCase, async: true
+  use Xo.DataCase, async: false
 
   import Xo.Generators.User, only: [user: 0]
   import Xo.Generators.Game, only: [game: 1]
@@ -61,9 +61,14 @@ defmodule Xo.Games.Bot.BotJoinTest do
       end
     end
 
-    @tag :skip
     test "starts a Bot.Server process" do
-      # Will be unskipped in Task 6 when Bot.Server exists
+      player_o = generate(user())
+      game = generate(game(actor: player_o))
+
+      game = Games.bot_join!(game, :random, actor: player_o)
+
+      assert [{pid, _}] = Registry.lookup(Xo.Games.BotRegistry, game.id)
+      assert Process.alive?(pid)
     end
   end
 end

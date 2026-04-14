@@ -13,16 +13,12 @@ defmodule Xo.Games.Bot.JoinGame do
     bot_user = BotUser.user(strategy_module)
 
     changeset
-    |> Ash.Changeset.before_action(fn changeset ->
-      bot_user = ensure_bot_user(strategy_module)
-
-      Ash.Changeset.force_change_attribute(changeset, :player_x_id, bot_user.id)
-    end)
+    |> Ash.Changeset.force_change_attribute(:player_x_id, bot_user.id)
     |> Ash.Changeset.after_action(fn _changeset, game ->
       if Application.get_env(:xo, :bot_enabled, true) do
         case DynamicSupervisor.start_child(
                Xo.Games.BotSupervisor,
-               {Xo.Games.Bot.Server, {game.id, strategy_module}}
+               {Xo.Games.Bot.Server, {game.id, strategy_module, bot_user}}
              ) do
           {:ok, _pid} ->
             :ok
