@@ -5,7 +5,7 @@ defmodule Xo.Games.Game do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     notifiers: [Ash.Notifier.PubSub],
-    fragments: [Xo.Games.Commentator.GameFragment]
+    fragments: [Xo.Games.Commentator.GameFragment, Xo.Games.Bot.GameFragment]
 
   alias Xo.Accounts.User
   alias Xo.Games.Validations.ValidateGameState

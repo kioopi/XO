@@ -32,6 +32,9 @@ config :swoosh, :api_client, false
 # Disable the AI commentator in tests (it spawns processes that can't access the sandbox)
 config :xo, commentator_enabled: false
 
+# Disable bot server in tests (Bot.Server doesn't exist yet)
+config :xo, :bot_enabled, false
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

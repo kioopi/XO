@@ -15,6 +15,8 @@ defmodule Xo.Application do
       {Registry, keys: :unique, name: Xo.Games.CommentatorRegistry},
       {Task.Supervisor, name: Xo.Games.CommentatorTaskSupervisor},
       {DynamicSupervisor, name: Xo.Games.CommentatorSupervisor, strategy: :one_for_one},
+      {Registry, keys: :unique, name: Xo.Games.BotRegistry},
+      {DynamicSupervisor, name: Xo.Games.BotSupervisor, strategy: :one_for_one},
       # Start to serve requests, typically the last entry
       XoWeb.Endpoint,
       {AshAuthentication.Supervisor, [otp_app: :xo]}
