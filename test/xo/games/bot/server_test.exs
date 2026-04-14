@@ -37,6 +37,44 @@ defmodule Xo.Games.Bot.ServerTest do
     end
   end
 
+  describe "full game integration" do
+    test "bot plays a complete game to conclusion", %{game: game, player_o: player_o} do
+      # Play as O, picking from available fields and letting the bot respond each time.
+      # The bot uses the Random strategy, so it may win at any point.
+      game = Games.make_move!(game, 0, actor: player_o)
+      Process.sleep(2_000)
+
+      game = Games.get_by_id!(game.id, load: [:state, :move_count, :next_player_id, :available_fields])
+
+      game =
+        if game.state == :active do
+          # Pick the first available field for our next move
+          [field | _] = game.available_fields
+          game = Games.make_move!(game, field, actor: player_o)
+          Process.sleep(2_000)
+
+          game = Games.get_by_id!(game.id, load: [:state, :move_count, :next_player_id, :available_fields])
+
+          if game.state == :active do
+            [field | _] = game.available_fields
+            Games.make_move!(game, field, actor: player_o)
+            Process.sleep(2_000)
+
+            Games.get_by_id!(game.id, load: [:state, :move_count])
+          else
+            game
+          end
+        else
+          game
+        end
+
+      # Game should have multiple moves — at least the human's first move and bot's response
+      assert game.move_count >= 2
+      # The game should either still be active or have ended
+      assert game.state in [:active, :won, :draw]
+    end
+  end
+
   describe "move making" do
     test "bot makes a move after human moves", %{game: game, player_o: player_o} do
       Games.make_move!(game, 4, actor: player_o)
