@@ -1,0 +1,710 @@
+# XO
+
+## Xo: Tic-Tac-Toe with Ash Framework
+
+### Introduction
+
+**"Model your domain, derive the rest."**
+
+A live, executable walkthrough of building a tic-tac-toe game
+that grows from core gameplay to AI commentary to bot players —
+all on one declarative domain model.
+
+> **Setup:** This notebook connects to a running Xo Phoenix app via LiveBook's attached runtime.
+> 
+> Start the app with: `iex --sname xo --cookie xo_cookie -S mix phx.server`
+> 
+> Then set LiveBook's runtime to **Attached node** → `xo@<hostname>` with cookie `xo_cookie`.
+
+### Setup
+
+```elixir
+# Aliases
+alias Xo.{Games, Accounts}
+alias Xo.Games.{Game, Move, Message}
+
+# Ensure demo users exist, then sign them in
+Accounts.demo_create_user("Xavier")
+Accounts.demo_create_user("Olga")
+
+x = Accounts.demo_sign_in!("Xavier")
+o = Accounts.demo_sign_in!("Olga")
+
+IO.puts("Players ready:")
+IO.puts("  x — #{x.name} (#{x.email})")
+IO.puts("  o — #{o.name} (#{o.email})")
+:ok
+```
+
+```elixir
+# Board visualization helper — used throughout the presentation
+defmodule BoardViz do
+  @doc "Render a game board as a visual 3x3 grid using Kino"
+  def render(game) do
+    game =
+      Ash.load!(game, [:board, :state, :winner_id, :player_o, :player_x, :move_count],
+        authorize?: false
+      )
+
+    cells =
+      game.board
+      |> Enum.with_index()
+      |> Enum.map(fn {cell, i} ->
+        {label, style} =
+          case cell do
+            :o ->
+              {"O", "background: #fbbf24; color: #000; font-weight: bold;"}
+
+            :x ->
+              {"X", "background: #34d399; color: #000; font-weight: bold;"}
+
+            nil ->
+              {"#{i}", "background: #374151; color: #6b7280;"}
+          end
+
+        Kino.HTML.new("""
+        <div style="#{style} width: 64px; height: 64px; display: flex;
+                    align-items: center; justify-content: center;
+                    font-size: 28px; border-radius: 8px; margin: 2px;
+                    font-family: monospace;">
+          #{label}
+        </div>
+        """)
+      end)
+
+    grid = Kino.Layout.grid(cells, columns: 3)
+
+    status =
+      case game.state do
+        :won ->
+          # winner_name should probably become a calculation on game
+          winner =
+            if game.winner_id == game.player_o_id,
+              do: game.player_o.name,
+              else: game.player_x.name
+
+          Kino.HTML.new(
+            "<div style='color: #34d399; font-size: 18px; font-weight: bold; padding: 4px;'>Winner: #{winner}!</div>"
+          )
+
+        :draw ->
+          Kino.HTML.new(
+            "<div style='color: #fbbf24; font-size: 18px; padding: 4px;'>It's a draw!</div>"
+          )
+
+        :active ->
+          Kino.HTML.new(
+            "<div style='color: #60a5fa; font-size: 14px; padding: 4px;'>Game in progress... (#{game.move_count} moves)</div>"
+          )
+
+        :open ->
+          Kino.HTML.new(
+            "<div style='color: #9ca3af; font-size: 14px; padding: 4px;'>Waiting for opponent...</div>"
+          )
+      end
+
+    Kino.Layout.grid([status, grid], columns: 1, gap: 8)
+  end
+end
+
+:ok
+```
+
+### What is Ash?
+
+A **declarative, extensible framework** for building Elixir applications.
+
+* Not a web framework — it sits *below* Phoenix
+* You model your domain: resources, actions, relationships
+* Ash handles the plumbing: persistence, authorization, validation, queries, PubSub, forms...
+
+Built on **Spark** (the DSL engine) and **Igniter** (code generation).
+
+**Thesis:** You describe **what** your app does. Ash handles **how**.
+
+### The Ash Ecosystem
+
+```elixir
+Kino.Mermaid.new("""
+graph TD
+  Ash((Ash Core))
+  Ash --> AshPostgres[AshPostgres]
+  Ash --> AshPhoenix[AshPhoenix]
+  Ash --> AshAuth[AshAuthentication]
+  Ash --> AshAi[AshAi]
+  Ash --> AshGraphql[AshGraphql]
+  Ash --> AshJsonApi[AshJsonApi]
+  Ash --> AshAdmin[AshAdmin]
+
+  style Ash fill:#7c3aed,color:#fff,stroke-width:3px
+  style AshPostgres fill:#059669,color:#fff
+  style AshPhoenix fill:#dc2626,color:#fff
+  style AshAuth fill:#2563eb,color:#fff
+  style AshAi fill:#d97706,color:#fff
+  style AshGraphql fill:#7c3aed,color:#fff
+  style AshJsonApi fill:#7c3aed,color:#fff
+  style AshAdmin fill:#7c3aed,color:#fff
+""")
+```
+
+Extensions plug into the same domain model.
+**Define once, derive many interfaces.**
+
+### The Project
+
+Let's build a **tic-tac-toe** game and see how far declarations take us.
+
+Three features, growing in complexity:
+
+1. **Core game** — the fundamentals of Ash
+2. **AI commentator** — extending the domain with AshAi
+3. **Bot player** — stretching Ash beyond the database
+
+---
+
+## The Core Game
+
+### Model your domain
+
+### Game Resource — What Ash Knows
+
+Let's introspect the live Game resource — every action, relationship, and calculation
+
+### Actions — Where Behavior Lives
+
+Actions are not CRUD endpoints. They are **named operations** with arguments,
+validations, and changes.
+
+```elixir
+actions = Ash.Resource.Info.actions(Game)
+
+Kino.DataTable.new(
+  Enum.map(actions, fn action ->
+    %{
+      name: action.name,
+      type: action.type,
+      arguments:
+        action
+        |> Map.get(:arguments, [])
+        |> Enum.map(& &1.name)
+        |> Enum.join(", ")
+    }
+  end),
+  name: "Game Actions",
+  keys: [:name, :type, :arguments]
+)
+```
+
+### Calculations — Derived, Never Stored
+
+The game state is **never persisted** — it's always computed from moves.
+
+```elixir
+calculations = Ash.Resource.Info.calculations(Game)
+
+Kino.DataTable.new(
+  Enum.map(calculations, fn calc ->
+    %{
+      name: calc.name,
+      type: inspect(calc.type)
+    }
+  end),
+  name: "Game Calculations",
+  keys: [:name, :type]
+)
+```
+
+### Aggregates — Push Computation to the Database
+
+```elixir
+aggregates = Ash.Resource.Info.aggregates(Game)
+
+Kino.DataTable.new(
+  Enum.map(aggregates, fn agg ->
+    %{
+      name: agg.name,
+      kind: agg.kind,
+      relationship: inspect(agg.relationship_path)
+    }
+  end),
+  name: "Game Aggregates",
+  keys: [:name, :kind, :relationship]
+)
+```
+
+No N+1 queries. No manual SQL. Declare what you need.
+
+### Create a Game — Live
+
+```elixir
+# Olga creates a game
+game = Games.create_game!(actor: o)
+
+# Load all the derived state
+game =
+  Ash.load!(
+    game,
+    [:state, :board, :player_o, :player_x, :move_count, :available_fields],
+    authorize?: false
+  )
+
+Kino.Tree.new(%{
+  id: game.id,
+  state: game.state,
+  player_o: game.player_o.name,
+  player_x: game.player_x,
+  board: game.board,
+  move_count: game.move_count,
+  available_fields: game.available_fields
+})
+```
+
+The game is **open** — waiting for Player X. All state is calculated.
+
+### Join + Authorization Policies
+
+Policies are declared on the resource, enforced everywhere.
+
+```elixir
+# Xavier joins the game
+game = Games.join!(game, actor: x)
+game = Ash.load!(game, [:state, :board, :player_o, :player_x, :next_player_id], authorize?: false)
+
+IO.puts("State: #{game.state}")
+IO.puts("Next player: #{if game.next_player_id == o.id, do: "Olga (O)", else: "Xavier (X)"}")
+IO.puts("")
+
+# What if Olga tries to join her own game?
+case Games.join(game, actor: o) do
+  {:ok, _} ->
+    IO.puts("Joined (unexpected!)")
+
+  {:error, error} ->
+    IO.puts("Policy enforced! Olga can't join her own game:")
+    IO.puts("  #{inspect(error.__struct__)}")
+end
+```
+
+### Play a Full Game
+
+O wins with the left column — watch the board build up:
+
+```elixir
+# Fresh game
+game = Games.create_game!(actor: o)
+game = Games.join!(game, actor: x)
+
+# O aims for left column (0, 3, 6). X plays center and right.
+moves = [{0, o}, {4, x}, {3, o}, {1, x}, {6, o}]
+
+final_game =
+  Enum.reduce(moves, game, fn {field, actor}, g ->
+    Games.make_move!(g, field, actor: actor)
+  end)
+
+BoardViz.render(final_game)
+```
+
+### PubSub — Real-Time for Free
+
+PubSub is declared on the resource. I never call `Phoenix.PubSub.broadcast` in domain code.
+
+```elixir
+# Subscribe to the lobby topic
+Phoenix.PubSub.subscribe(Xo.PubSub, "game:lobby")
+
+# Create a game — this triggers a PubSub notification
+_new_game = Games.create_game!(actor: o)
+
+# Check our mailbox for the broadcast
+receive do
+  %Phoenix.Socket.Broadcast{} = broadcast ->
+    Kino.Tree.new(
+      %{
+        topic: broadcast.topic,
+        event: broadcast.event,
+        payload_type: inspect(broadcast.payload.__struct__)
+      }
+    )
+after
+  2_000 -> "No message received (timeout)"
+end
+```
+
+Declare which actions publish to which topics. Real-time updates just work.
+
+### Act 1 Recap
+
+We declared:
+
+* **3 resources** (Game, Move, Message) with relationships, actions, calculations, aggregates
+* **Authorization policies** on the resource
+* **PubSub** topics per action
+
+We got for free:
+
+* Real-time updates across all clients
+* Form changesets with validation
+* A ~150-line LiveView with zero business logic
+* Authorization enforced everywhere
+
+**"Model your domain, derive the rest."**
+
+---
+
+## Act 2: Adding Intelligence
+
+### The AI Commentator
+
+### Fragments — Extending Without Modifying
+
+The commentator adds new actions to the Game resource **without opening `game.ex`**.
+
+```elixir
+# Which actions are original, which came from fragments?
+fragment_actions = [:generate_commentary, :generate_commentary_with_context,
+                    :generate_commentary_with_tools, :bot_join]
+
+all_actions = Ash.Resource.Info.actions(Game)
+
+Kino.DataTable.new(
+  Enum.map(all_actions, fn action ->
+    %{
+      name: action.name,
+      type: action.type,
+      from_fragment?: if(action.name in fragment_actions, do: "Yes", else: "")
+    }
+  end),
+  name: "Game Actions — Original + Fragment-Added",
+  keys: [:name, :type, :from_fragment?]
+)
+```
+
+### AshAi — Your Domain Becomes the AI's Tools
+
+The domain you modeled in Act 1 is now **queryable by an LLM**.
+Your Ash read actions become the AI's tools. No glue code.
+
+```elixir
+Kino.Mermaid.new("""
+sequenceDiagram
+  participant Game as Game Event
+  participant CS as Commentator.Server
+  participant Ash as Ash Domain
+  participant LLM as LLM Provider
+  participant Msg as Message Resource
+
+  Game->>CS: PubSub broadcast (make_move)
+  CS->>Ash: generate_commentary(game_id, event)
+  Ash->>LLM: Prompt + tools (read_game, read_moves)
+  LLM->>Ash: tool call: read_game(id)
+  Ash->>LLM: game state, board, players
+  LLM->>Ash: commentary text
+  Ash->>CS: {:ok, commentary}
+  CS->>Msg: create_message!(commentary)
+  Msg->>Game: PubSub broadcast (chat)
+""")
+```
+
+### Supervision — OTP Alongside Ash
+
+```elixir
+Kino.Mermaid.new("""
+graph TD
+  App[Xo.Supervisor]
+  App --> Repo[Xo.Repo]
+  App --> PubSub[Phoenix.PubSub]
+  App --> CS[Commentator.Supervisor]
+  App --> BS[Bot.Supervisor]
+  App --> Endpoint[XoWeb.Endpoint]
+
+  CS --> CR[CommentatorRegistry]
+  CS --> CTS[Task.Supervisor]
+  CS --> CDS[DynamicSupervisor]
+  CDS -.-> C1[Commentator.Server<br/>per game]
+
+  BS --> BR[BotRegistry]
+  BS --> BDS[DynamicSupervisor]
+  BDS -.-> B1[Bot.Server<br/>per game]
+
+  style CS fill:#d97706,color:#fff
+  style BS fill:#059669,color:#fff
+  style C1 fill:#d97706,color:#fff,stroke-dasharray: 5 5
+  style B1 fill:#059669,color:#fff,stroke-dasharray: 5 5
+""")
+```
+
+```elixir
+# The LIVE supervision tree — what's actually running right now:
+
+# Uncomment an re-run cell.
+# game = Games.create_game!(actor: o)
+
+# Uncomment an re-run cell.
+# game = Games.bot_join!(game, :strategic, actor: o)
+
+# Add commented out bot join here. Uncomment an re-run cell.
+
+Kino.Process.render_sup_tree(Xo.Games.Commentator.Supervisor)
+```
+
+### The Commentator in Action
+
+> **Note:** This section requires an LLM API key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`)
+> configured in the Phoenix app's environment. Without it, the commentator will start
+> but commentary generation will fail gracefully.
+
+```elixir
+# Create a game and set up real-time observation
+game = Games.create_game!(actor: o)
+
+# Subscribe to chat messages for this game
+Phoenix.PubSub.subscribe(Xo.PubSub, "game:chat:#{game.id}")
+
+frame = Kino.Frame.new()
+Kino.render(frame)
+Kino.Frame.append(frame, Kino.HTML.new("<b>Chat log for Game ##{game.id}:</b><br/>"))
+
+# Collect commentary messages in the background
+# FIXME: this is a bug isnt it? listere is created but never used.
+# So it will likely not revieve any broadcasts
+listener =
+  spawn(fn ->
+    Stream.repeatedly(fn ->
+      receive do
+        %Phoenix.Socket.Broadcast{event: "create"} = broadcast ->
+          msg = broadcast.payload.data
+          msg = Ash.load!(msg, [:user], authorize?: false)
+          name = msg.user.name
+          body = msg.body
+
+          Kino.Frame.append(
+            frame,
+            Kino.HTML.new(
+              "<div style='margin: 4px 0; padding: 4px 8px; background: #1f2937; border-radius: 4px;'><b>#{name}:</b> #{body}</div>"
+            )
+          )
+
+        _ ->
+          :skip
+      after
+        15_000 -> :timeout
+      end
+    end)
+    |> Enum.take(20)
+  end)
+
+# Xavier joins — this starts the commentator!
+game = Games.join!(game, actor: x)
+Kino.Frame.append(frame, Kino.HTML.new("<em>Xavier joined. Commentator starting...</em><br/>"))
+
+# Wait for greeting, then make some moves
+Process.sleep(3_000)
+
+game = Games.make_move!(game, 4, actor: o)
+Kino.Frame.append(frame, Kino.HTML.new("<em>Olga plays center (4)</em><br/>"))
+Process.sleep(3_000)
+
+game = Games.make_move!(game, 0, actor: x)
+Kino.Frame.append(frame, Kino.HTML.new("<em>Xavier plays top-left (0)</em><br/>"))
+Process.sleep(3_000)
+
+game = Games.make_move!(game, 8, actor: o)
+Kino.Frame.append(frame, Kino.HTML.new("<em>Olga plays bottom-right (8)</em><br/>"))
+
+Kino.Frame.append(
+  frame,
+  Kino.HTML.new("<br/><em>Watch for AI commentary appearing above...</em>")
+)
+
+frame
+```
+
+### Act 2 Recap
+
+We added AI commentary to the game:
+
+* **Fragments** added new actions without modifying `game.ex`
+* **AshAi** turned our domain into an AI tool interface
+* The commentator posts through the **same Message resource**
+* The chat UI **didn't change at all**
+
+This is what a strong domain model gives you — not just at the start,
+but when you extend the project months later.
+
+---
+
+## Act 3: Stretching the Model
+
+### The Bot Player
+
+### Ash.DataLayer.Simple — Strategies as a Resource
+
+Bot strategies are **hardcoded Elixir modules** — not database rows.
+But Ash models them as a queryable resource anyway.
+
+```elixir
+strategies = Games.list_strategies!()
+
+Kino.DataTable.new(
+  strategies,
+  name: "Bot Strategies — Code-backed, not database-backed",
+  keys: [:key, :name, :description]
+)
+```
+
+### Bot Architecture
+
+```elixir
+Kino.Mermaid.new("""
+sequenceDiagram
+  participant Human as Human Player
+  participant Ash as Ash Domain
+  participant PS as PubSub
+  participant Bot as Bot.Server
+
+  Human->>Ash: create_game!(actor: olga)
+  Human->>Ash: bot_join!(game, :strategic, actor: olga)
+  Ash->>Bot: DynamicSupervisor.start_child
+  Ash->>PS: broadcast join
+
+  Note over Bot: Subscribed to game PubSub
+
+  Human->>Ash: make_move!(game, 4, actor: olga)
+  Ash->>PS: broadcast make_move
+  PS->>Bot: handle_info(broadcast)
+  Bot->>Ash: make_move!(game, field, actor: bot_user)
+  Note over Bot: Same API as a human!
+  Ash->>PS: broadcast make_move
+  PS->>Human: LiveView updates
+""")
+```
+
+### Play Against a Bot
+
+```elixir
+# Create a game and invite the strategic bot
+game = Games.create_game!(actor: o)
+game = Games.bot_join!(game, :strategic, actor: o)
+
+frame = Kino.Frame.new()
+Kino.render(frame)
+
+# Show initial board
+game = Games.get_by_id!(game.id, authorize?: false)
+Kino.Frame.render(frame, BoardViz.render(game))
+
+# Olga plays center
+game = Games.make_move!(game, 4, actor: o)
+Process.sleep(2_000)
+
+# Reload — bot should have responded
+game = Games.get_by_id!(game.id, authorize?: false)
+Kino.Frame.render(frame, BoardViz.render(game))
+
+IO.puts("After Olga plays center and the bot responds:")
+
+game = Ash.load!(game, [:state, :player_x, :move_count, :available_fields], authorize?: false)
+IO.puts("  Bot is: #{game.player_x.name}")
+IO.puts("  Moves so far: #{game.move_count}")
+IO.puts("  Available fields: #{inspect(game.available_fields)}")
+
+frame
+```
+
+### Same API — The Key Insight
+
+The bot calls `Games.make_move!` — **the exact same function a human uses**.
+The domain doesn't know or care who's calling it.
+
+```elixir
+Kino.Mermaid.new("""
+graph LR
+  Human[Human Player<br/>via LiveView] -->|Games.make_move!| Domain[Ash Domain<br/>Xo.Games]
+  Bot[Bot.Server<br/>GenServer] -->|Games.make_move!| Domain
+  LB[This LiveBook!] -->|Games.make_move!| Domain
+
+  Domain --> V[Validations]
+  Domain --> P[Policies]
+  Domain --> PS[PubSub]
+  Domain --> DB[Postgres]
+
+  style Domain fill:#7c3aed,color:#fff,stroke-width:3px
+""")
+```
+
+Same actions. Same PubSub. Same authorization model.
+
+### Act 3 Recap
+
+We added bot players:
+
+* **Ash.DataLayer.Simple** — a resource backed by code, not a database
+* **Elixir Behaviours** — plain modules that Ash wraps as a queryable resource
+* **Fragments** — same pattern as the commentator
+* The bot uses the **same API as a human player**
+* The lobby just needed a **dropdown**. The game UI didn't change.
+
+---
+
+## Closing
+
+### What We Built
+
+```elixir
+Kino.DataTable.new(
+  [
+    %{
+      feature: "Core Game",
+      what_we_wrote: "Resources, calculations, changes",
+      what_ash_derived: "PubSub, forms, authorization, queries"
+    },
+    %{
+      feature: "AI Commentator",
+      what_we_wrote: "Fragment + GenServer",
+      what_ash_derived: "AI tool interface from existing actions"
+    },
+    %{
+      feature: "Bot Player",
+      what_we_wrote: "Behaviour + in-memory resource",
+      what_ash_derived: "Queryable strategies, same domain API"
+    }
+  ],
+  name: "Three Features, One Domain Model",
+  keys: [:feature, :what_we_wrote, :what_ash_derived]
+)
+```
+
+### The Domain — By the Numbers
+
+```elixir
+resources = Ash.Domain.Info.resources(Xo.Games)  |> Enum.uniq()
+
+summary =
+  Enum.map(resources, fn resource ->
+    %{
+      resource: inspect(resource) |> String.replace("Xo.Games.", ""),
+      actions: length(Ash.Resource.Info.actions(resource)),
+      attributes: length(Ash.Resource.Info.attributes(resource)),
+      calculations: length(Ash.Resource.Info.calculations(resource)),
+      aggregates: length(Ash.Resource.Info.aggregates(resource)),
+      relationships: length(Ash.Resource.Info.relationships(resource))
+    }
+  end)
+
+Kino.DataTable.new(summary,
+  name: "The Xo.Games Domain — Everything Declared",
+  keys: [:resource, :actions, :attributes, :calculations, :aggregates, :relationships]
+)
+```
+
+### Try It
+
+* **Ash HQ**: [ash-hq.org](https://ash-hq.org)
+* **Community**: Discord, Elixir Forum, hex.pm
+
+Model a small domain. See what Ash derives for you.
+
+---
+
+*Thank you!*
