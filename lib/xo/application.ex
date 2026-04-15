@@ -12,11 +12,8 @@ defmodule Xo.Application do
       Xo.Repo,
       {DNSCluster, query: Application.get_env(:xo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Xo.PubSub},
-      {Registry, keys: :unique, name: Xo.Games.CommentatorRegistry},
-      {Task.Supervisor, name: Xo.Games.CommentatorTaskSupervisor},
-      {DynamicSupervisor, name: Xo.Games.CommentatorSupervisor, strategy: :one_for_one},
-      {Registry, keys: :unique, name: Xo.Games.BotRegistry},
-      {DynamicSupervisor, name: Xo.Games.BotSupervisor, strategy: :one_for_one},
+      Xo.Games.Commentator.Supervisor,
+      Xo.Games.Bot.Supervisor,
       # Start to serve requests, typically the last entry
       XoWeb.Endpoint,
       {AshAuthentication.Supervisor, [otp_app: :xo]}
