@@ -86,16 +86,11 @@ defmodule Xo.Games.Commentator.Server do
   defp generate_and_post(game_id, bot, event_description) do
     Task.Supervisor.start_child(Xo.Games.CommentatorTaskSupervisor, fn ->
       try do
-        commentary = Games.generate_commentary!(game_id, event_description, actor: bot)
-        post_message(game_id, bot, commentary)
+        Games.post_commentary!(game_id, event_description, actor: bot)
       rescue
         e ->
           Logger.error("Commentator failed: #{Exception.message(e)}")
       end
     end)
-  end
-
-  defp post_message(game_id, bot, body) do
-    Games.create_message!(body, %{game_id: game_id}, actor: bot)
   end
 end

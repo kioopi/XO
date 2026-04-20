@@ -21,5 +21,11 @@ defmodule Xo.Games.Commentator.DomainFragment do
         action: :generate_commentary,
         args: [:game_id, :event_description]
     end
+
+    resource Xo.Games.Message do
+      define :post_commentary,
+        action: :post_commentary,
+        args: [:game_id, :event_description]
+    end
   end
 end

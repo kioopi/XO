@@ -10,6 +10,7 @@ defmodule Xo.Games.Game do
   alias Xo.Accounts.User
   alias Xo.Games.Validations.ValidateGameState
   alias Xo.Games.Changes
+  alias Xo.Games.Calculations
 
   postgres do
     table "games"

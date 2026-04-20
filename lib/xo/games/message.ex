@@ -4,7 +4,8 @@ defmodule Xo.Games.Message do
     domain: Xo.Games,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    notifiers: [Ash.Notifier.PubSub]
+    notifiers: [Ash.Notifier.PubSub],
+    fragments: [Xo.Games.Commentator.MessageFragment]
 
   alias Xo.Accounts.User
   alias Xo.Games.Game
@@ -51,7 +52,7 @@ defmodule Xo.Games.Message do
     module XoWeb.Endpoint
     prefix "game"
 
-    publish :create, ["chat", :game_id], load: [:user]
+    publish_all :create, ["chat", :game_id], load: [:user]
   end
 
   attributes do
