@@ -67,4 +67,24 @@ defmodule Xo.Accounts.UserTest do
       assert user2.id in ids
     end
   end
+
+  describe "demo_create_user" do
+    test "Creates a user" do
+      assert {:ok, %User{} = user} = Xo.Accounts.demo_create_user("hans")
+      assert to_string(user.email) == "hans@example.com"
+    end
+
+    test "Returns exisiting user" do
+      existing = generate(user())
+
+      assert {:ok, user} =
+               Xo.Accounts.demo_create_user(
+                 existing.name,
+                 existing.email
+               )
+
+      assert user.name == existing.name
+      assert user.email == existing.email
+    end
+  end
 end

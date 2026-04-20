@@ -164,35 +164,42 @@ Three features, growing in complexity:
 
 ## The Core Game
 
-### Model your domain
+### Inspect the domain
 
-### Game Resource — What Ash Knows
+### Attributes
 
-Let's introspect the live Game resource — every action, relationship, and calculation
+```elixir
 
-### Actions — Where Behavior Lives
+Ash.Resource.Info.attributes(Game) 
+  |> Enum.reduce(%{}, fn att, acc -> Map.put(acc, att.name, att) end)
+  |> Kino.Tree.new()
+
+```
+
+### Calculations
+
+```elixir
+
+Ash.Resource.Info.calculations(Game) 
+  |> Enum.reduce(%{}, fn att, acc -> Map.put(acc, att.name, att) end)
+  |> Kino.Tree.new()
+
+```
+
+### Actions
 
 Actions are not CRUD endpoints. They are **named operations** with arguments,
 validations, and changes.
 
 ```elixir
-actions = Ash.Resource.Info.actions(Game)
+actions = Ash.Resource.Info.actions(Game) 
+  |> Enum.reduce(%{}, fn act, acc -> Map.put(acc, act.name, act) end)
+  |> Kino.Tree.new()
 
-Kino.DataTable.new(
-  Enum.map(actions, fn action ->
-    %{
-      name: action.name,
-      type: action.type,
-      arguments:
-        action
-        |> Map.get(:arguments, [])
-        |> Enum.map(& &1.name)
-        |> Enum.join(", ")
-    }
-  end),
-  name: "Game Actions",
-  keys: [:name, :type, :arguments]
-)
+```
+
+```elixir
+game = Ash.Changeset.for_create(Game, :create, %{}, actor: x) |> Ash.create!()
 ```
 
 ### Calculations — Derived, Never Stored

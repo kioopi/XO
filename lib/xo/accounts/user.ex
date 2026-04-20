@@ -39,6 +39,10 @@ defmodule Xo.Accounts.User do
     repo Xo.Repo
   end
 
+  code_interface do
+    define :get_by_email, args: [:email]
+  end
+
   actions do
     defaults [:read]
 
@@ -106,6 +110,9 @@ defmodule Xo.Accounts.User do
       accept [:name]
 
       argument :email, :ci_string
+
+      upsert? true
+      upsert_identity :unique_email
 
       change fn changeset, _context ->
         if Ash.Changeset.get_argument(changeset, :email) do

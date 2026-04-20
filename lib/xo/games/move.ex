@@ -31,6 +31,7 @@ defmodule Xo.Games.Move do
       description "Board position (0-8) where the move is placed."
       allow_nil? false
       public? true
+      constraints min: 0, max: 8
     end
 
     attribute :move_number, :integer do
