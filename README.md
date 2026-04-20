@@ -46,6 +46,7 @@ The `Xo.Games` domain (`lib/xo/games.ex`) exposes a clean API via Ash's `define`
 ```elixir
 Games.create_game!(actor: player)
 Games.list_open_games!()
+Games.list_active_games!()
 Games.join!(game, actor: other_player)
 Games.make_move!(game, 4, actor: player)
 Games.get_by_id!(42)
@@ -57,6 +58,7 @@ The Game resource publishes events via `Ash.Notifier.PubSub` for real-time UI up
 
 **Lobby** — for listing available games:
 - `game:created` — a new open game appeared (loads state and player_o)
+- `game:lobby` — fan-out topic published on every lobby-affecting change (create, join, destroy)
 - `game:activity:<id>` — a game was joined or destroyed (remove from list)
 
 **Game view** — for watching a specific game:
@@ -127,13 +129,24 @@ Demo.show(game)
 Demo.board(game)
 ```
 
+### Resource & Domain Fragments
+
+The AI Commentator and Bot Player subsystems extend the core resources without editing them, using Ash's **fragment** pattern (`Spark.Dsl.Fragment`):
+
+- The `Games` domain composes in `Xo.Games.Commentator.DomainFragment` (AshAi `tools` + `generate_commentary`/`post_commentary` actions) and `Xo.Games.Bot.DomainFragment` (`bot_join` + `list_strategies` actions) — see `lib/xo/games.ex`
+- `Xo.Games.Game` is extended by `Xo.Games.Commentator.GameFragment` and `Xo.Games.Bot.GameFragment` (each adds an action with its own policy and pubsub config)
+- `Xo.Games.Message` is extended by `Xo.Games.Commentator.MessageFragment` (the `post_commentary` create action)
+
+Each subsystem is self-contained in its own directory — adding or removing one is a one-line change to the host resource or domain.
+
 ### AI Commentator
 
 The game features an AI commentator powered by [AshAi](https://hexdocs.pm/ash_ai) that joins the chat panel and reacts to moves with witty commentary. It demonstrates:
 
-- **Prompt-backed actions** — An Ash generic action where the implementation is an LLM call via `AshAi.Actions.prompt/2`
-- **AshAi tools** — Exposing Ash read actions as tools the LLM can call to query game state
-- **OTP integration** — A per-game `GenServer` subscribes to PubSub events and spawns async tasks for LLM calls
+- **Prompt-backed actions** — Ash generic actions whose implementation is an LLM call via `AshAi.Actions.prompt/2` (`generate_commentary` on `Game`)
+- **Compound write actions** — `post_commentary` on `Message` runs a `GenerateBody` change that calls the LLM, then persists the result as a chat message in a single Ash action
+- **AshAi tools** — Exposing Ash read actions as tools the LLM can call to query game state (`read_game`, `read_moves`)
+- **OTP integration** — A per-game `Xo.Games.Commentator.Server` subscribes to PubSub events and spawns async LLM tasks under a dedicated `Xo.Games.Commentator.Supervisor`
 
 To enable the commentator, set an API key for your chosen LLM provider:
 
@@ -171,27 +184,79 @@ ANTHROPIC_API_KEY=sk-ant-... COMMENTATOR_USE_TOOLS=true mix phx.server
 | `OPENAI_API_KEY` | — | API key for OpenAI (required when provider is `openai`) |
 | `COMMENTATOR_USE_TOOLS` | `false` | Set to `true` to use AshAi tools mode |
 
+### Bot Players
+
+The game ships with computer opponents. Each bot is a regular Ash actor backed by its own user account, joined to a game via the `bot_join` action (only the game's creator may invite a bot — see the `bot_join` policy in `Xo.Games.Bot.GameFragment`):
+
+```elixir
+# List available bot strategies (an Ash resource backed by Ash.DataLayer.Simple)
+Games.list_strategies!()
+
+# Create a game and invite a bot opponent
+game = Games.create_game!(actor: x)
+Games.bot_join!(game, :random, actor: x)        # naive random move
+# or
+Games.bot_join!(game, :strategic, actor: x)     # heuristic move selection
+```
+
+Implementation:
+
+- `Xo.Games.Bot.Behaviour` defines the strategy contract (`info/0`, `bot_email/0`, `select_move/1`)
+- `Xo.Games.Bot.Strategy` is itself an Ash resource — `Games.list_strategies!()` enumerates the registered strategies
+- `Xo.Games.Bot.Strategies.Random` and `Strategic` implement the behaviour
+- `Xo.Games.Bot.JoinGame` (an Ash change) sets `player_x_id` to the strategy's bot user and starts the per-game bot server in an `after_action` hook
+- `Xo.Games.Bot.Server` is a per-game `GenServer` (registered in `Xo.Games.BotRegistry`) that subscribes to `game:<id>` events and replies with `Games.make_move!/3` on its turn (configurable `:bot_delay_ms`)
+- `Xo.Games.Bot.Supervisor` owns the registry and dynamic supervisor, running as a sibling of the commentator supervisor in `Xo.Application`
+
+A bot game also auto-starts the AI Commentator — the same `StartCommentator` change is attached to both `:join` and `:bot_join`.
+
 ## Project Structure
 
 ```
 lib/xo/
+  application.ex                       # OTP supervisor tree (Repo, PubSub, Commentator.Supervisor, Bot.Supervisor, Endpoint)
+  accounts.ex                          # Accounts domain
   accounts/
-    user.ex              # User resource with AshAuthentication
-    token.ex             # Authentication tokens
+    user.ex                            # User resource (AshAuthentication + magic-link + demo actions)
+    token.ex                           # AshAuthentication.TokenResource
+  games.ex                             # Games domain (composes Commentator and Bot domain fragments)
   games/
-    game.ex              # Game resource (actions, policies, calculations, pubsub)
-    move.ex              # Move resource (field, move_number, validations)
-    message.ex           # Chat message resource with pubsub
-    commentator.ex       # AI commentator GenServer (subscribes to game events)
-    commentator_bot.ex   # Bot user management (creates/caches the bot user)
-    calculations/        # GameState, WinnerId, Board, AvailableFields
-    changes/             # CreateMove, StartCommentator
-    validations/         # ValidateGameState
-    move/changes/        # LoadGame, SetMoveNumber
-    move/validations/    # ValidatePlayerTurn
-  games.ex               # Games domain with AshAi tools and code interface
-  accounts.ex            # Accounts domain
-  demo.ex                # IEx REPL helpers
+    game.ex                            # Game resource (actions, policies, calculations, pubsub)
+    move.ex                            # Move resource (field, move_number, validations)
+    message.ex                         # Chat message resource with pubsub
+    win_checker.ex                     # Pure tic-tac-toe win logic
+    game_summary.ex                    # Human-readable game state formatter (REPL & LLM prompts)
+    llm.ex                             # LangChain ChatModel builder (Anthropic / OpenAI)
+    calculations/                      # GameState, WinnerId, Board, AvailableFields
+    changes/create_move.ex             # Game.make_move => creates a Move
+    validations/validate_game_state.ex # Custom guard that replaces AshStateMachine transitions
+    move/changes/                      # LoadGame, SetMoveNumber
+    move/validations/                  # ValidatePlayerTurn
+    commentator/                       # AI Commentator subsystem (extends Game, Message, and the Domain via fragments)
+      server.ex                        # Per-game GenServer subscribed to PubSub
+      supervisor.ex                    # Owns Registry + TaskSupervisor + DynamicSupervisor
+      bot.ex                           # Commentator bot user (commentator@xo.bot)
+      domain_fragment.ex               # AshAi tools + generate_commentary / post_commentary code interface
+      game_fragment.ex                 # generate_commentary action on Game
+      message_fragment.ex              # post_commentary create action on Message
+      generate_commentary.ex           # Dispatcher: direct-context vs tools mode
+      start_commentator.ex             # Change attached to :join and :bot_join
+      changes/                         # GenerateBody, RelateBotUser
+    bot/                               # Bot Player subsystem (extends Game and the Domain via fragments)
+      server.ex                        # Per-game GenServer (subscribes to game events, plays moves)
+      supervisor.ex                    # Owns Registry + DynamicSupervisor
+      bot_user.ex                      # Per-strategy bot user
+      strategy.ex                      # Ash resource: list of available strategies
+      behaviour.ex                     # Strategy behaviour contract
+      join_game.ex                     # Change implementing :bot_join
+      domain_fragment.ex               # bot_join + list_strategies code interface
+      game_fragment.ex                 # bot_join action with its own policy & pubsub
+      strategies/random.ex             # Random move
+      strategies/strategic.ex          # Heuristic move selection
+  demo.ex                              # IEx REPL helpers
+  mailer.ex                            # Swoosh mailer
+  repo.ex                              # AshPostgres repo
+  secrets.ex                           # AshAuthentication signing key
 ```
 
 ## Learn More

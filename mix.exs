@@ -49,7 +49,6 @@ defmodule Xo.MixProject do
       {:tidewave, "~> 0.5", only: [:dev]},
       {:live_debugger, "~> 0.7", only: [:dev]},
       {:kino, "~> 0.19"},
-      {:ash_state_machine, "~> 0.2"},
       {:ash_admin, "~> 0.14"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:ash_authentication, "~> 4.0"},
