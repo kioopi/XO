@@ -9,7 +9,10 @@ defmodule Xo.Games.Changes.CreateMove do
     field = Ash.Changeset.get_argument(changeset, :field)
     game_id = changeset.data.id
 
-    Ash.Changeset.manage_relationship(changeset, :moves, [%{field: field, game_id: game_id}],
+    Ash.Changeset.manage_relationship(
+      changeset,
+      :moves,
+      [%{field: field, game_id: game_id}],
       type: :create
     )
   end

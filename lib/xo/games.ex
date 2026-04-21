@@ -11,7 +11,7 @@ defmodule Xo.Games do
       define :create_game, action: :create
       define :list_open_games, action: :open
       define :list_active_games, action: :active
-      define :join, action: :join
+      define :join
       define :make_move, action: :make_move, args: [:field]
       define :get_by_id, action: :read, get_by: [:id]
     end

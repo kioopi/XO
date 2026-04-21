@@ -6,9 +6,22 @@ defmodule Xo.Games.Calculations.Board do
   """
   use Ash.Resource.Calculation
 
+  require Ash.Expr
+
   @impl true
   def load(_query, _opts, _context) do
     [:player_o_fields, :player_x_fields]
+  end
+
+  @impl true
+  def expression(_opts, _context) do
+    Ash.Expr.expr(
+      fragment(
+        "ARRAY(SELECT CASE WHEN i = ANY(?) THEN 'o' WHEN i = ANY(?) THEN 'x' ELSE NULL END FROM generate_series(0, 8) AS i)",
+        player_o_fields,
+        player_x_fields
+      )
+    )
   end
 
   @impl true

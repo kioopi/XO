@@ -23,9 +23,6 @@ defmodule Xo.Games.Calculations.GameState do
   defp game_state(%{move_count: 9}), do: :draw
   defp game_state(_), do: :active
 
-  # This is untested.
-  # TODO: check when this is used in the DataLayer and when calulcate is used.
-  # Can calculate use this as well to remove the duplication?
   @impl true
   def expression(_opts, _context) do
     expr(

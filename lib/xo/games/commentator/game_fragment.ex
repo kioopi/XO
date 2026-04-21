@@ -31,31 +31,6 @@ defmodule Xo.Games.Commentator.GameFragment do
       run Xo.Games.Commentator.GenerateCommentary
     end
 
-    action :generate_commentary_with_context, :string do
-      description """
-      Generate commentary about a game event. Game context is provided directly as text.
-      """
-
-      argument :game_context, :string do
-        allow_nil? false
-        description "A summary of the current game state including board, players, and moves."
-      end
-
-      argument :event_description, :string do
-        allow_nil? false
-        description "What just happened in the game."
-      end
-
-      run AshAi.Actions.prompt(
-            fn _input, _context -> Xo.Games.LLM.build() end,
-            adapter: AshAi.Actions.Prompt.Adapter.RequestJson,
-            tools: false,
-            prompt:
-              {@commentator_system_prompt,
-               "<%= @input.arguments.game_context %>\n\nEvent: <%= @input.arguments.event_description %>"}
-          )
-    end
-
     action :generate_commentary_with_tools, :string do
       description """
       Generate commentary about a game event using AshAi tools to query game state.
@@ -79,6 +54,31 @@ defmodule Xo.Games.Commentator.GameFragment do
             prompt:
               {@commentator_system_prompt,
                "Game ID: <%= @input.arguments.game_id %>\nEvent: <%= @input.arguments.event_description %>\n\nUse the available tools to look up the current game state, then produce a brief commentary."}
+          )
+    end
+
+    action :generate_commentary_with_context, :string do
+      description """
+      Generate commentary about a game event. Game context is provided directly as text.
+      """
+
+      argument :game_context, :string do
+        allow_nil? false
+        description "A summary of the current game state including board, players, and moves."
+      end
+
+      argument :event_description, :string do
+        allow_nil? false
+        description "What just happened in the game."
+      end
+
+      run AshAi.Actions.prompt(
+            fn _input, _context -> Xo.Games.LLM.build() end,
+            adapter: AshAi.Actions.Prompt.Adapter.RequestJson,
+            tools: false,
+            prompt:
+              {@commentator_system_prompt,
+               "<%= @input.arguments.game_context %>\n\nEvent: <%= @input.arguments.event_description %>"}
           )
     end
   end

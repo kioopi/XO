@@ -32,8 +32,7 @@ defmodule Xo.Games.Validations.ValidateGameState do
     else
       {:error,
        field: :state,
-       message: "game must be in one of %{states}, got %{actual}",
-       vars: %{states: inspect(opts[:states]), actual: inspect(game.state)}}
+       message: "game must be in #{Enum.map(opts[:states], &to_string/1)}, got #{game.state}"}
     end
   end
 end

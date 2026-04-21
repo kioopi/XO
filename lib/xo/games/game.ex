@@ -127,6 +127,10 @@ defmodule Xo.Games.Game do
   end
 
   calculations do
+    calculate :won, :boolean, Calculations.Won do
+      argument :fields, {:array, :integer}, allow_expr?: true
+    end
+
     calculate :winner_id, :integer, Calculations.WinnerId,
       description: "The user ID of the winning player, or nil."
 
@@ -136,9 +140,12 @@ defmodule Xo.Games.Game do
     calculate :next_move_number, :integer, expr(move_count + 1),
       description: "The sequence number for the next move."
 
+    calculate :next_player, :atom, expr(if(rem(move_count, 2) == 0, :o, :x)),
+      description: ":x or :o atom indicating player to play next."
+
     calculate :next_player_id,
               :integer,
-              expr(if(rem(move_count, 2) == 0, player_o_id, player_x_id)),
+              expr(if(next_player == :o, player_o_id, player_x_id)),
               description: "The user ID of the player whose turn it is."
 
     calculate :board, {:array, :atom}, Calculations.Board,

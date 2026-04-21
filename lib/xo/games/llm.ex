@@ -12,7 +12,8 @@ defmodule Xo.Games.LLM do
         raise "ANTHROPIC_API_KEY is required when llm_provider is :anthropic"
 
     LangChain.ChatModels.ChatAnthropic.new!(%{
-      model: Application.get_env(:xo, :anthropic_model, "claude-sonnet-4-20250514"),
+      # , "claude-sonnet-4-20250514"),
+      model: Application.get_env(:xo, :anthropic_model, "anthropic:claude-3-haiku-20240307"),
       api_key: api_key
     })
   end
