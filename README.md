@@ -259,6 +259,16 @@ lib/xo/
   secrets.ex                           # AshAuthentication signing key
 ```
 
+## Livebook
+
+There is a Livebook markdown file in docs/presentation.livemd
+Start the server with a node name and cookie
+
+
+```bash
+iex --name xo@127.0.0.1 --cookie xo_cookie -S mix phx.server
+```
+
 ## Learn More
 
 - [Ash Framework](https://hexdocs.pm/ash) — The declarative framework powering this project
